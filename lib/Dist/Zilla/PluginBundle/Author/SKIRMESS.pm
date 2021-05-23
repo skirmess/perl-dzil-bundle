@@ -373,7 +373,7 @@ sub configure {
             {
                 file => [qw(README)],
             },
-        ]
+        ],
     );
 
     # Output a LICENSE file
