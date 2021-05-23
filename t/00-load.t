@@ -8,7 +8,7 @@ use warnings;
 
 use Test::More 0.88;
 
-use lib qw(lib .);
+use lib qw(lib);
 
 my @modules = qw(
   Dist::Zilla::Plugin::Author::SKIRMESS::CPANFile::Project
@@ -28,7 +28,6 @@ my @modules = qw(
   Dist::Zilla::Plugin::Author::SKIRMESS::UpdatePod
   Dist::Zilla::PluginBundle::Author::SKIRMESS
   Dist::Zilla::Role::Author::SKIRMESS::Resources
-  bin/check-ci-perl-version
 );
 
 plan tests => scalar @modules;

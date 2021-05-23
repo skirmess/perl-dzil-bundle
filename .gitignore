@@ -3,5 +3,4 @@
 .*.swp
 .build
 .perlcritic_package.yml
-dzil-inc-*
-tmp
+perl-dzil-bundle-*

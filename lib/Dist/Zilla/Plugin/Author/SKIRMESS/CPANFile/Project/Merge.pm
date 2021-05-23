@@ -119,7 +119,7 @@ Version 1.000
 =head2 Bugs / Feature Requests
 
 Please report any bugs or feature requests through the issue tracker
-at L<https://github.com/skirmess/dzil-inc/issues>.
+at L<https://github.com/skirmess/perl-dzil-bundle/issues>.
 You will be notified automatically of any progress on your issue.
 
 =head2 Source Code
@@ -127,9 +127,9 @@ You will be notified automatically of any progress on your issue.
 This is open source software. The code repository is available for
 public review and contribution under the terms of the license.
 
-L<https://github.com/skirmess/dzil-inc>
+L<https://github.com/skirmess/perl-dzil-bundle>
 
-  git clone https://github.com/skirmess/dzil-inc.git
+  git clone https://github.com/skirmess/perl-dzil-bundle.git
 
 =head1 AUTHOR
 

@@ -10,54 +10,31 @@ Version 1.000
 
 ## Create a new dzil project
 
-Create a new repository on Github and clone it.
+Create a new repository on Github, clone it, and add the following to
+`dist.ini`:
 
-    $ git submodule add ../dzil-inc.git
-    $ git commit -m 'added Author::SKIRMESS plugin bundle as git submodule'
+    [Git::Checkout]
+    repo = https://github.com/skirmess/perl-dzil-bundle.git
+    push_url = git@github.com:skirmess/perl-dzil-bundle.git
+    dir = dzil-bundle
 
-    # in dist.ini
     [lib]
-    lib = dzil-inc/lib
+    lib = dzil-bundle/lib
 
     [@Author::SKIRMESS]
     :version = 1.000
-
-## Clone a project which already contains this submodule
-
-    $ git clone https://github.com/skirmess/...
-    $ git submodule update --init
-
-    # To update dzil-inc
-    $ cd dzil-inc && git checkout master
-
-## Update the submodule
-
-    $ cd dzil-inc && git pull
 
 # DESCRIPTION
 
 This is a [Dist::Zilla](https://metacpan.org/pod/Dist::Zilla) PluginBundle.
 
 The bundle will not be released on CPAN, instead it is designed to be
-included as Git submodule in the project that will use it.
+used with the Git::Checkout plugin in the project that will use it.
 
 # USAGE
 
-To use this PluginBundle, include it as Git submodule in your project and
-add it to your dist.ini. You can provide the following options:
+This PluginBundle supports the following option:
 
-- `appveyor_earliest_perl` - Earliest version of Perl to use on AppVeyor.
-(default: ci\_earliest\_perl)
-- `appveyor_test_on_cygwin` - Test with Cygwin 32 bit on AppVeyor. (default:
-true)
-- `appveyor_test_on_cygwin64` - Test with Cygwin 64 bit on AppVeyor. (default:
-true)
-- `appveyor_test_on_strawberry` - Test with Strawberry Perl on AppVeyor.
-(default: true)
-- `ci_earliest_perl` - The earliest version of Perl to test on Travis CI and
-AppVeyor. (default: 5.8)
-- `debug` - Enables debug output of the Bundle itself (unfortunately the
-status of `dzil -v` is unknown to a plugin bundle). (default: false)
 - `set_script_shebang` - This indicates whether `SetScriptShebang` should be
 used or not. (default: true)
 
@@ -66,7 +43,7 @@ used or not. (default: true)
 ## Bugs / Feature Requests
 
 Please report any bugs or feature requests through the issue tracker
-at [https://github.com/skirmess/dzil-inc/issues](https://github.com/skirmess/dzil-inc/issues).
+at [https://github.com/skirmess/perl-dzil-bundle/issues](https://github.com/skirmess/perl-dzil-bundle/issues).
 You will be notified automatically of any progress on your issue.
 
 ## Source Code
@@ -74,9 +51,9 @@ You will be notified automatically of any progress on your issue.
 This is open source software. The code repository is available for
 public review and contribution under the terms of the license.
 
-[https://github.com/skirmess/dzil-inc](https://github.com/skirmess/dzil-inc)
+[https://github.com/skirmess/perl-dzil-bundle](https://github.com/skirmess/perl-dzil-bundle)
 
-    git clone https://github.com/skirmess/dzil-inc.git
+    git clone https://github.com/skirmess/perl-dzil-bundle.git
 
 # AUTHOR
 
