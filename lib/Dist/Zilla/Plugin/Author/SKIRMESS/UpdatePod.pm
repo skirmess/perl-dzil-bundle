@@ -64,14 +64,14 @@ sub _check_pod_sections {
     my $is_lib = $file->name =~ m{ [.] pm $ }xsm;
 
     my @needed_sections = (
-        [ 'NAME',        REQUIRED ],
-        [ 'VERSION',     REQUIRED ],
-        [ 'SYNOPSIS',    ALLOWED ],
-        [ 'DESCRIPTION', ALLOWED ],
-        [ 'USAGE',       ( $is_lib ? ALLOWED   : FORBIDDEN ) ],
-        [ 'OPTIONS',     ( $is_lib ? FORBIDDEN : ALLOWED ) ],
-        [ 'SUBCOMMANDS', ( $is_lib ? FORBIDDEN : ALLOWED ) ],
-        [ 'EXIT STATUS', ( $is_lib ? FORBIDDEN : ALLOWED ) ],
+        [ 'NAME',                  REQUIRED ],
+        [ 'VERSION',               REQUIRED ],
+        [ 'SYNOPSIS',              ALLOWED ],
+        [ 'DESCRIPTION',           ALLOWED ],
+        [ 'USAGE',                 ( $is_lib ? ALLOWED   : FORBIDDEN ) ],
+        [ 'OPTIONS',               ( $is_lib ? FORBIDDEN : ALLOWED ) ],
+        [ 'SUBCOMMANDS',           ( $is_lib ? FORBIDDEN : ALLOWED ) ],
+        [ 'EXIT STATUS',           ( $is_lib ? FORBIDDEN : ALLOWED ) ],
         [ 'EXAMPLES',              ALLOWED ],
         [ 'ENVIRONMENT',           ALLOWED ],
         [ 'RATIONALE',             ALLOWED ],

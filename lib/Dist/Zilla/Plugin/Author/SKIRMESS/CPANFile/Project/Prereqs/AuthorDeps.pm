@@ -24,7 +24,7 @@ sub mvp_multivalue_args {
         qw(
           expand_bundle
           skip
-          )
+        )
     );
 }
 

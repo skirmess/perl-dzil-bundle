@@ -413,7 +413,7 @@ sub configure {
                       xt/release/manifest.t
                       xt/release/meta-json.t
                       xt/release/meta-yaml.t
-                      ),
+                    ),
                 ],
             },
         ],

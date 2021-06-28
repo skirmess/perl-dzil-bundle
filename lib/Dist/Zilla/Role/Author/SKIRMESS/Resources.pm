@@ -15,7 +15,7 @@ sub bugtracker {
 
     my $resources = $self->_get_resources;
 
-    return if !defined $resources->{bugtracker} || ref $resources->{bugtracker} ne ref {};
+    return if !defined $resources->{bugtracker}        || ref $resources->{bugtracker} ne ref {};
     return if !defined $resources->{bugtracker}->{web} || ref $resources->{bugtracker}->{web} ne ref q{};
 
     return $resources->{bugtracker}->{web};
@@ -36,7 +36,7 @@ sub repository {
 
     my $resources = $self->_get_resources;
 
-    return if !defined $resources->{repository} || ref $resources->{repository} ne ref {};
+    return if !defined $resources->{repository}        || ref $resources->{repository} ne ref {};
     return if !defined $resources->{repository}->{url} || ref $resources->{repository}->{url} ne ref q{};
 
     return $resources->{repository}->{url};

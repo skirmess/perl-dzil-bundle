@@ -95,7 +95,6 @@ on develop => sub {
     requires 'Dist::Zilla::Plugin::UploadToCPAN';
     requires 'Dist::Zilla::Plugin::VerifyPhases';
     requires 'Dist::Zilla::Plugin::VersionFromMainModule';
-    requires 'FindBin';
     requires 'Module::Info';
     requires 'Perl::Critic', '1.140';
     requires 'Perl::Critic::Policy::Bangs::ProhibitBitwiseOperators', '1.12';
@@ -186,11 +185,7 @@ on develop => sub {
     requires 'Perl::Critic::Policy::Variables::ProhibitUselessInitialization', '0.02';
     requires 'Pod::Wordlist';
     requires 'Test2::V0';
-    requires 'Test::CPAN::Changes';
-    requires 'Test::CPAN::Meta', '0.12';
-    requires 'Test::CPAN::Meta::JSON';
     requires 'Test::CleanNamespaces';
-    requires 'Test::DistManifest', '1.003';
     requires 'Test::EOL';
     requires 'Test::Kwalitee';
     requires 'Test::MinimumVersion', '0.008';

@@ -137,7 +137,7 @@ sub _xt_tests {
 
     # check if the project root we saved during the before build phase exists
     my $project_root = $self->_project_root;
-    $self->log_fatal('internal error: _project_root is not defined') if !defined $project_root;
+    $self->log_fatal('internal error: _project_root is not defined')                                       if !defined $project_root;
     $self->log_fatal("internal error: _project_root '$project_root' does not exist or is not a directory") if !-d $project_root;
 
     # Change to the project root (will be restored when $wd goes out of scope)
