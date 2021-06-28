@@ -11,6 +11,7 @@ use Moose;
 with qw(Dist::Zilla::Role::PrereqSource);
 
 use Perl::MinimumVersion 1.26;
+use Safe::Isa;
 use Term::ANSIColor qw(colored);
 
 use namespace::autoclean;
@@ -18,7 +19,7 @@ use namespace::autoclean;
 sub register_prereqs {
     my ($self) = @_;
 
-    $self->_scan_files( 'runtime', ':InstallModules', ':ExecFiles' );
+    $self->_scan_files( 'runtime',   ':InstallModules', ':ExecFiles' );
     $self->_scan_files( 'configure', ':IncModules' );
     $self->_scan_files( 'test',      ':TestFiles' );
 
@@ -48,7 +49,7 @@ sub _scan_files {
   FILE:
     for my $file_name ( keys %pmv ) {
         my $ver = $pmv{$file_name}->minimum_explicit_version;
-        next if !defined $ver;
+        next FILE if !defined $ver || !$ver->$_isa('version');
 
         if ( !defined $min_perl || $ver > $min_perl ) {
             $min_perl = $ver;
@@ -59,6 +60,7 @@ sub _scan_files {
   FILE:
     for my $file_name ( keys %pmv ) {
         my $ver = $pmv{$file_name}->minimum_syntax_version;
+        next FILE if !defined $ver || !$ver->$_isa('version');
 
         if ( !defined $min_perl || $ver > $min_perl ) {
             $min_perl = $ver;
