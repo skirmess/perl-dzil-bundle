@@ -76,7 +76,7 @@ jobs:
         env:
           PERL_USE_UNSAFE_INC: 0
 
-      - run: ${{ steps.installsitebin.outputs.path }}/prove -lr xt/author
+      - run: ${{ steps.installsitebin.outputs.path }}/prove -lr xt
         working-directory: ${{ github.event.repository.name }}
         env:
           PERL_USE_UNSAFE_INC: 0
