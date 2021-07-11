@@ -19,6 +19,7 @@ my @modules = qw(
   Dist::Zilla::Plugin::Author::SKIRMESS::CheckFilesInDistribution
   Dist::Zilla::Plugin::Author::SKIRMESS::ContributingGuide
   Dist::Zilla::Plugin::Author::SKIRMESS::CopyAllFilesFromDistributionToProject
+  Dist::Zilla::Plugin::Author::SKIRMESS::MakeMaker::Awesome
   Dist::Zilla::Plugin::Author::SKIRMESS::MetaJSON::RemoveDevelopPrereqs
   Dist::Zilla::Plugin::Author::SKIRMESS::MinimumPerl
   Dist::Zilla::Plugin::Author::SKIRMESS::PromptIfStale::CPANFile::Project

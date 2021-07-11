@@ -92,7 +92,7 @@ sub configure {
                     'dist.ini',
                     @generated_files,
                 ],
-                exclude_match    => '^xt/',
+                exclude_match    => '^xt/(?!smoke/)',
                 include_dotfiles => 1,
             },
         ],
@@ -180,7 +180,7 @@ sub configure {
         [
             'AutoPrereqs',
             {
-                develop_finder => [ ':ExtraTestFiles', '@Author::SKIRMESS/ExtraTestFiles', ],    ## no critic (ValuesAndExpressions::RequireInterpolationOfMetachars)
+                develop_finder => ['@Author::SKIRMESS/ExtraTestFiles'],    ## no critic (ValuesAndExpressions::RequireInterpolationOfMetachars)
             },
         ],
     );
@@ -390,7 +390,14 @@ sub configure {
 
     # Build a Makefile.PL that uses ExtUtils::MakeMaker
     # (this is also the test runner)
-    $self->add_plugins('MakeMaker');
+    $self->add_plugins(
+        [
+            'Author::SKIRMESS::MakeMaker::Awesome',
+            {
+                test_file => 't/*.t',
+            },
+        ],
+    );
 
     # Support running xt tests via dzil test from the project
     $self->add_plugins(

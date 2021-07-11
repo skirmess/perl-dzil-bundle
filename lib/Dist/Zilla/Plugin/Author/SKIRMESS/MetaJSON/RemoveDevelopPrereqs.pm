@@ -10,7 +10,7 @@ use Moose;
 
 with qw(Dist::Zilla::Role::FileMunger);
 
-use JSON::MaybeXS qw();
+use JSON::PP qw();
 use Scalar::Util qw(blessed);
 
 use namespace::autoclean;
@@ -33,7 +33,7 @@ sub munge_file {
         sub {
             $self->log_debug( [ 'Removing develop prereqs from %s', $file->name ] );
 
-            my $json = JSON::MaybeXS->new( canonical => 1, pretty => 1, ascii => 1 );
+            my $json = JSON::PP->new->canonical->pretty->ascii;
 
             my $meta_json = $json->decode( $file->$orig_coderef() );
             delete $meta_json->{prereqs}->{develop};

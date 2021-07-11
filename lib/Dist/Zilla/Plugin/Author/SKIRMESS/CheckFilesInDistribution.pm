@@ -97,6 +97,14 @@ sub _is_file_allowed {
         return;
     }
 
+    if ( $dirs[0] eq 'xt' ) {
+        return if @dirs < 3;
+
+        return 1 if $dirs[1] eq 'smoke' and $dirs[-1] =~ m{ .+ [.] t $ }xsm;
+
+        return;
+    }
+
     return 1 if $dirs[0] eq 'corpus';
 
     return;

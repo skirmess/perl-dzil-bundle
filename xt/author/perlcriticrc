@@ -141,7 +141,7 @@ forbid_use_version = 1
 [ValuesAndExpressions::ProhibitImplicitNewlines]
 [ValuesAndExpressions::ProhibitInterpolationOfLiterals]
 #[ValuesAndExpressions::ProhibitLeadingZeros]
-[ValuesAndExpressions::ProhibitLongChainsOfMethodCalls]
+#[ValuesAndExpressions::ProhibitLongChainsOfMethodCalls]
 #[ValuesAndExpressions::ProhibitMagicNumbers]
 [ValuesAndExpressions::ProhibitMismatchedOperators]
 [ValuesAndExpressions::ProhibitMixedBooleanOperators]
