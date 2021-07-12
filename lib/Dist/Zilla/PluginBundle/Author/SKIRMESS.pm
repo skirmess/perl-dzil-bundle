@@ -17,6 +17,7 @@ use Carp qw(confess);
 use Dist::Zilla::File::OnDisk ();
 use Dist::Zilla::Types 6.000 qw(Path);
 use File::Temp ();
+use List::Util qw(first);
 use Module::CPANfile 1.1004 ();
 use Module::Metadata ();
 use Path::Tiny qw(path);
@@ -387,6 +388,27 @@ sub configure {
 
     # Install a directory's contents as "ShareDir" content
     $self->add_plugins('ShareDir');
+
+    # Set dynamic_config to true in META.* files if we have xt/smoke files
+    # (that is not correct if the files under xt/smoke do not add new
+    # dependencies)
+    $self->add_plugins(
+        [
+            'Code::MetaProvider',
+            {
+                metadata => [
+                    sub {
+                        my ($self) = @_;
+                        if ( first { $_->name =~ m{ ^ xt/smoke/ }xsm } @{ $self->zilla->files } ) {
+                            return +{ dynamic_config => 1 };
+                        }
+
+                        return +{};
+                    },
+                ],
+            },
+        ],
+    );
 
     # Build a Makefile.PL that uses ExtUtils::MakeMaker
     # (this is also the test runner)

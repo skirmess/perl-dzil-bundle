@@ -68,6 +68,7 @@ on develop => sub {
     requires 'Dist::Zilla::Plugin::CheckPrereqsIndexed';
     requires 'Dist::Zilla::Plugin::CheckSelfDependency';
     requires 'Dist::Zilla::Plugin::CheckStrictVersion';
+    requires 'Dist::Zilla::Plugin::Code::MetaProvider';
     requires 'Dist::Zilla::Plugin::ConfirmRelease';
     requires 'Dist::Zilla::Plugin::ExecDir';
     requires 'Dist::Zilla::Plugin::FinderCode';
