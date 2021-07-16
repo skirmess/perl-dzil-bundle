@@ -2,6 +2,7 @@ requires 'App::Prove';
 requires 'CPAN::Meta::Prereqs::Filter';
 requires 'CPAN::Meta::Requirements';
 requires 'Carp';
+requires 'Config::MVP', '2.200012';
 requires 'Dist::Zilla::File::InMemory';
 requires 'Dist::Zilla::File::OnDisk';
 requires 'Dist::Zilla::Plugin::MakeMaker::Awesome';

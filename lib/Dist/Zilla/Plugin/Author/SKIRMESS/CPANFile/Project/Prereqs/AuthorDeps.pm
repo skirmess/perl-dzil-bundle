@@ -119,7 +119,22 @@ sub after_build {
             $package_name = $plugin->module;
             next PLUGIN if exists $skip{$package_name};
 
-            $version = $self->_get_version_from_section( [ $plugin->payload_list ] );
+            # payload_list calls _autoexpand_list which is broken and fails
+            # if a value is a code ref, we have to create the list ourself
+            my $payload = $plugin->payload;
+            my @payload_list;
+          KEY:
+            for my $key ( sort keys %{$payload} ) {
+                my $value = $payload->{$key};
+                if ( ref $value eq ref sub { } ) {
+                    push @payload_list, $key, $value;
+                }
+                else {
+                    push @payload_list, $plugin->_autoexpand_list( $key, $value );
+                }
+            }
+
+            $version = $self->_get_version_from_section( \@payload_list );
             $dependencies .= $self->_create_plugin_cpanfile_entry_string( $package_name, $version );
         }
     }

@@ -23,6 +23,8 @@ use Module::Metadata ();
 use Path::Tiny qw(path);
 use Perl::Critic::MergeProfile;
 
+use Config::MVP 2.200012 ();    # https://github.com/rjbs/Config-MVP/issues/13
+
 use namespace::autoclean 0.09;
 
 # The checkout location of this bundle
@@ -162,15 +164,11 @@ sub configure {
     # :ExtraTestFiles is empty because we don't add xt test files to the
     # distribution, that's why we have to create a new ExtraTestFiles
     # plugin
-    #
-    # code must be a single value but inside an array ref. Bug is
-    # reported as:
-    # https://github.com/rjbs/Config-MVP/issues/13
     $self->add_plugins(
         [
             'FinderCode', 'ExtraTestFiles',
             {
-                code  => [ \&_find_files_extra_tests_files ],
+                code  => \&_find_files_extra_tests_files,
                 style => 'list',
             },
         ],
@@ -396,16 +394,14 @@ sub configure {
         [
             'Code::MetaProvider',
             {
-                metadata => [
-                    sub {
-                        my ($self) = @_;
-                        if ( first { $_->name =~ m{ ^ xt/smoke/ }xsm } @{ $self->zilla->files } ) {
-                            return +{ dynamic_config => 1 };
-                        }
+                metadata => sub {
+                    my ($self) = @_;
+                    if ( first { $_->name =~ m{ ^ xt/smoke/ }xsm } @{ $self->zilla->files } ) {
+                        return +{ dynamic_config => 1 };
+                    }
 
-                        return +{};
-                    },
-                ],
+                    return +{};
+                },
             },
         ],
     );
