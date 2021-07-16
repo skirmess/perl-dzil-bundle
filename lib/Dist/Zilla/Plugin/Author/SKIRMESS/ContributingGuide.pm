@@ -94,6 +94,7 @@ You can run tests directly using the prove tool:
 
 or with the Makefile:
 
+  $ export AUTOMATED_TESTING=1
   $ perl Makefile.PL
   $ make
   $ make test
@@ -119,7 +120,6 @@ If you would like to work with the project, clone it with the following
 commands:
 
   $ git clone {{ $self->repository }}
-  $ git submodule update --init
 
 You may need to satisfy some dependencies. You can use cpanminus in the
 cloned project to install them:
