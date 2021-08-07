@@ -43,6 +43,7 @@ requires 'Perl::Tidy';
 requires 'Safe::Isa';
 requires 'Scalar::Util';
 requires 'Term::ANSIColor';
+requires 'YAML::Tiny';
 requires 'constant';
 requires 'namespace::autoclean', '0.09';
 requires 'perl', '5.010';

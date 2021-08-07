@@ -273,6 +273,12 @@ sub configure {
     # Remove develop prereqs from META.json file
     $self->add_plugins('Author::SKIRMESS::MetaJSON::RemoveDevelopPrereqs');
 
+    # Remove generated_by from META.yml to reduce repository churn
+    $self->add_plugins('Author::SKIRMESS::MetaYAML::RemoveGeneratedBy');
+
+    # Remove generated_by from META.json to reduce repository churn
+    $self->add_plugins('Author::SKIRMESS::MetaJSON::RemoveGeneratedBy');
+
     # create a cpanfile in the project
     $self->add_plugins('Author::SKIRMESS::CPANFile::Project');
 

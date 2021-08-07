@@ -21,6 +21,8 @@ my @modules = qw(
   Dist::Zilla::Plugin::Author::SKIRMESS::CopyAllFilesFromDistributionToProject
   Dist::Zilla::Plugin::Author::SKIRMESS::MakeMaker::Awesome
   Dist::Zilla::Plugin::Author::SKIRMESS::MetaJSON::RemoveDevelopPrereqs
+  Dist::Zilla::Plugin::Author::SKIRMESS::MetaJSON::RemoveGeneratedBy
+  Dist::Zilla::Plugin::Author::SKIRMESS::MetaYAML::RemoveGeneratedBy
   Dist::Zilla::Plugin::Author::SKIRMESS::MinimumPerl
   Dist::Zilla::Plugin::Author::SKIRMESS::PromptIfStale::CPANFile::Project
   Dist::Zilla::Plugin::Author::SKIRMESS::RemoveWhitespaceFromEndOfLine
