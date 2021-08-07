@@ -1,2 +1,3 @@
 # test cannot be configured to allow "$self->log_fatal() if ..."
+[-Bangs::ProhibitDebuggingModules]
 [-ControlStructures::ProhibitPostfixControls]

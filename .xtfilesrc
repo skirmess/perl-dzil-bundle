@@ -8,3 +8,7 @@
 test = t
 test = xt
 module = t/lib
+
+# and check our Makefile.PL
+[Files]
+bin = Makefile.PL

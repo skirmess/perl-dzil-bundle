@@ -12,9 +12,17 @@ extends 'Dist::Zilla::Plugin::MakeMaker::Awesome';
 
 with 'Dist::Zilla::Role::PPI';
 
+has _has_extended_prereqs => (
+    is      => 'rw',
+    default => 0,
+);
+
 use CPAN::Meta::Requirements;
+use Data::Dumper;
 use JSON::PP;
 use Perl::PrereqScanner 1.016;
+use Perl::Tidy;
+use Term::ANSIColor qw(colored);
 
 use namespace::autoclean;
 
@@ -55,22 +63,60 @@ my {{ $WriteMakefileArgs }}
     : '';
 }}
 my {{ $fallback_prereqs }}
-IS_SMOKER_BLOCK
-unless ( eval { ExtUtils::MakeMaker->VERSION('6.63_03') } ) {
-  delete $WriteMakefileArgs{TEST_REQUIRES};
-  delete $WriteMakefileArgs{BUILD_REQUIRES};
-  $WriteMakefileArgs{PREREQ_PM} = \%FallbackPrereqs;
+
+{{ $add_smoker_test_requirements }}
+
+if ( !eval { ExtUtils::MakeMaker->VERSION('6.63_03') } ) {
+    delete $WriteMakefileArgs{TEST_REQUIRES};
+    delete $WriteMakefileArgs{BUILD_REQUIRES};
+    $WriteMakefileArgs{PREREQ_PM} = \%FallbackPrereqs;
 }
 
-delete $WriteMakefileArgs{CONFIGURE_REQUIRES}
-  unless eval { ExtUtils::MakeMaker->VERSION(6.52) };
+if ( !eval { ExtUtils::MakeMaker->VERSION(6.52) } ) {
+    delete $WriteMakefileArgs{CONFIGURE_REQUIRES};
+}
 
 WriteMakefile(%WriteMakefileArgs);
 
 {{ $share_dir_block[1] }}
 
 {{ $footer }}
+# vim: ts=4 sts=4 sw=4 et: syntax=perl
 TEMPLATE
+};
+
+override _dump_as => sub {
+    my ( $self, $ref, $name ) = @_;
+
+    my $dumper = Data::Dumper->new( [$ref], [$name] );
+    $dumper->Sortkeys(1);
+    $dumper->Indent(1);
+    $dumper->Useqq(0);
+    $dumper->Quotekeys(0);
+    $dumper->Trailingcomma(1);
+
+    my $dumped = $dumper->Dump;
+
+    # Useqq(1) does not quote 0 but double quote the keys
+    # Useqq(0) does not double quote keys but quote 0
+    $dumped =~ s{ ( => \s+ ) '0' }{${1}0}xsmg;
+
+    return $dumped;
+};
+
+override fill_in_string => sub {
+    my ( $self, $content, $data_ref ) = @_;
+
+    if ( $self->_has_extended_prereqs ) {
+        $data_ref->{add_smoker_test_requirements} = <<'EOF';
+if ( $ENV{AUTOMATED_TESTING} || $ENV{EXTENDED_TESTING} ) {
+    $WriteMakefileArgs{test}{TESTS} .= ' xt/smoke/*.t';
+    _add_smoker_test_requirements();
+}
+EOF
+    }
+
+    return $self->SUPER::fill_in_string( $content, $data_ref );
 };
 
 override setup_installer => sub {
@@ -118,21 +164,8 @@ override setup_installer => sub {
     $self->log_fatal('META.json not seen')   if !$meta_seen;
     $self->log_fatal('Makefile.PL not seen') if !defined $makefile_pl;
 
-    if ( !$smoke_seen ) {
-        my $content = $makefile_pl->content;
-        $content =~ s{IS_SMOKER_BLOCK}{}xsm;
-        $makefile_pl->content($content);
-    }
-    else {
-        my $is_smoker_text = <<'EOF';
-if (is_smoker()) {
-  $WriteMakefileArgs{test}{TESTS} .= " xt/smoke/*.t";
-  _add_smoker_test_requirements();
-}
-EOF
-        my $content = $makefile_pl->content;
-        $content =~ s{IS_SMOKER_BLOCK}{$is_smoker_text}xsm;
-        $makefile_pl->content($content);
+    if ($smoke_seen) {
+        $self->_has_extended_prereqs(1);
 
         # Merge the requirements from META.json into the requirements from the
         # smoke tests
@@ -152,44 +185,54 @@ EOF
             }
         }
 
-        # copied from Dist::Zilla::Plugin::DynamicPrereqs 0.039 and slightly
-        # adjusted
         push @{ $self->footer_strs }, split /\n/, <<'EOF';    ## no critic (RegularExpressions::RequireDotMatchAnything, RegularExpressions::RequireExtendedFormatting, RegularExpressions::RequireLineBoundaryMatching)
-sub _add_prereq {
-  my ($mm_key, $module, $version_or_range) = @_;
-  $version_or_range ||= 0;
-  warn "$module already exists in $mm_key (at version $WriteMakefileArgs{$mm_key}{$module}) -- need to do a sane metamerge!"
-    if exists $WriteMakefileArgs{$mm_key}{$module}
-      and $WriteMakefileArgs{$mm_key}{$module} ne '0'
-      and $WriteMakefileArgs{$mm_key}{$module} ne $version_or_range;
-  warn "$module already exists in FallbackPrereqs (at version $FallbackPrereqs{$module}) -- need to do a sane metamerge!"
-    if exists $FallbackPrereqs{$module} and $FallbackPrereqs{$module} ne '0'
-        and $FallbackPrereqs{$module} ne $version_or_range;
-  $WriteMakefileArgs{$mm_key}{$module} = $FallbackPrereqs{$module} = $version_or_range;
-  return;
-}
-
-sub is_smoker {
-  return $ENV{AUTOMATED_TESTING} ? 1 : 0;
-}
-
 sub test_requires {
-  my ($module, $version_or_range) = @_;
-  _add_prereq(TEST_REQUIRES => $module, $version_or_range);
+    my ( $module, $version_or_range ) = @_;
+    $WriteMakefileArgs{TEST_REQUIRES}{$module} = $FallbackPrereqs{$module} = $version_or_range;
+    return;
 }
 
 sub _add_smoker_test_requirements {
 EOF
 
         for my $module ( sort keys %{$smoke_hash} ) {
-            push @{ $self->footer_strs }, qq{  test_requires('$module', } . ( $smoke_hash->{$module} eq '0' ? 0 : qq{'$smoke_hash->{$module}'} ) . ');';
+            push @{ $self->footer_strs }, qq{    test_requires('$module', } . ( $smoke_hash->{$module} eq '0' ? 0 : qq{'$smoke_hash->{$module}'} ) . ');';
         }
 
-        push @{ $self->footer_strs }, '}';
+        push @{ $self->footer_strs }, '    return;', '}';
 
     }
 
-    return super();
+    super();
+
+    my $source_string = $makefile_pl->content;
+    my $dest_string;
+    my $stderr_string;
+    my $errorfile_string;
+
+    local @ARGV;    ## no critic (Variables::RequireInitializationForLocalVars)
+    my $tidy_error = Perl::Tidy::perltidy(
+        source      => \$source_string,
+        destination => \$dest_string,
+        stderr      => \$stderr_string,
+        errorfile   => \$errorfile_string,
+    );
+
+    if ($stderr_string) {
+        $self->log( colored( $stderr_string, 'yellow' ) );
+        $tidy_error = 1;
+    }
+
+    if ($errorfile_string) {
+        $self->log( colored( $errorfile_string, 'yellow' ) );
+        $tidy_error = 1;
+    }
+
+    $self->log_fatal( colored( 'Exiting because of serious errors', 'red' ) ) if $tidy_error;
+
+    $makefile_pl->content($dest_string);
+
+    return;
 };
 
 override test => sub {

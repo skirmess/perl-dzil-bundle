@@ -92,7 +92,7 @@ modules = Class::ISA {Found use of Class::ISA. This module is deprecated by the 
 [Modules::RequireFilenameMatchesPackage]
 [Modules::RequireNoMatchVarsWithUseEnglish]
 #[Modules::RequireVersionVar]
-[NamingConventions::Capitalization]
+#[NamingConventions::Capitalization]
 [NamingConventions::ProhibitAmbiguousNames]
 [Objects::ProhibitIndirectSyntax]
 [References::ProhibitDoubleSigils]
