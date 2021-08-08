@@ -1,4 +1,4 @@
-package Dist::Zilla::Plugin::Author::SKIRMESS::MetaJSON::RemoveGeneratedBy;
+package Dist::Zilla::Plugin::Author::SKIRMESS::Manifest::NoChurn;
 
 use 5.006;
 use strict;
@@ -8,44 +8,34 @@ our $VERSION = '1.000';
 
 use Moose;
 
-with qw(Dist::Zilla::Role::FileMunger);
+extends 'Dist::Zilla::Plugin::Manifest';
 
-use JSON::PP qw();
 use Scalar::Util qw(blessed);
 
 use namespace::autoclean;
 
-has filename => (
-    is      => 'ro',
-    isa     => 'Str',
-    default => 'META.json',
-);
-
-sub munge_file {
+override add_file => sub {
     my ( $self, $file ) = @_;
 
-    return if $file->name ne $self->filename;
-
-    $self->log_fatal( q{'} . $file->name . q{' is not a 'Dist::Zilla::File::FromCode'} ) if blessed($file) ne 'Dist::Zilla::File::FromCode';
+    my $name = $file->name;
+    $self->log_fatal("'$name' is not a 'Dist::Zilla::File::FromCode'") if blessed($file) ne 'Dist::Zilla::File::FromCode';
+    $self->log_fatal("File '$name' is not called 'MANIFEST'")          if $name ne 'MANIFEST';
+    $self->log_fatal("File '$name' is of type 'bytes'")                if !$file->is_bytes;
 
     my $orig_coderef = $file->code();
+
     $file->code(
         sub {
-            $self->log_debug( [ 'Removing generated_by from %s', $file->name ] );
-
-            my $json = JSON::PP->new->canonical->pretty->ascii;
-
-            my $meta_json = $json->decode( $file->$orig_coderef() );
-            delete $meta_json->{generated_by};
-            delete $meta_json->{x_serialization_backend};
-
-            my $content = $json->encode($meta_json) . "\n";
-            return $content;
+            $self->log_debug( [ 'Removing churn from %s', $file->name ] );
+            my $content = join "\n", grep { $_ !~ m{ ^ [#] }xsm } split /\n/, $file->$orig_coderef;    ## no critic (RegularExpressions::ProhibitUselessTopic, RegularExpressions::RequireDotMatchAnything, RegularExpressions::RequireExtendedFormatting, RegularExpressions::RequireLineBoundaryMatching)
+            return "$content\n";
         },
     );
 
+    super();
+
     return;
-}
+};
 
 __PACKAGE__->meta->make_immutable;
 
@@ -59,7 +49,7 @@ __END__
 
 =head1 NAME
 
-Dist::Zilla::Plugin::Author::SKIRMESS::MetaJSON::RemoveGeneratedBy - Remove generated_by from META.json file
+Dist::Zilla::Plugin::Author::SKIRMESS::Manifest::NoChurn - Remove churn from MANIFEST file
 
 =head1 VERSION
 

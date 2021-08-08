@@ -1,4 +1,4 @@
-package Dist::Zilla::Plugin::Author::SKIRMESS::MetaYAML::RemoveGeneratedBy;
+package Dist::Zilla::Plugin::Author::SKIRMESS::MetaYAML::RemoveChurn;
 
 use 5.006;
 use strict;
@@ -31,10 +31,11 @@ sub munge_file {
     my $orig_coderef = $file->code();
     $file->code(
         sub {
-            $self->log_debug( [ 'Removing generated_by from %s', $file->name ] );
+            $self->log_debug( [ 'Removing churn from %s', $file->name ] );
 
             my $meta_yaml = YAML::Tiny->read_string( $file->$orig_coderef() );
             delete $meta_yaml->[0]->{generated_by};
+            delete $meta_yaml->[0]->{x_generated_by_perl};
             delete $meta_yaml->[0]->{x_serialization_backend};
 
             # force this to be numeric - for whatever reason YAML::Tiny
@@ -63,7 +64,7 @@ __END__
 
 =head1 NAME
 
-Dist::Zilla::Plugin::Author::SKIRMESS::MetaYAML::RemoveGeneratedBy - Remove generated_by from META.yml file
+Dist::Zilla::Plugin::Author::SKIRMESS::MetaYAML::RemoveChurn - Remove churn from META.yml file
 
 =head1 VERSION
 
