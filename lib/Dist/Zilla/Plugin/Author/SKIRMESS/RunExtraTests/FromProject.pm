@@ -154,7 +154,7 @@ sub _xt_tests {
         delete $xt_child{'xt/release'};
     }
 
-    if ( !exists $ENV{AUTOMATED_TESTING} ) {
+    if ( !exists $ENV{EXTENDED_TESTING} ) {
         delete $xt_child{'xt/smoke'};
     }
 
@@ -208,7 +208,7 @@ In your F<dist.ini>:
 
 This plugin is used to run xt tests from your project against your distribution and against your project. This is useful if you don't want to include your xt tests in your distribution. If you include your xt tests with your distribution, use L<RunExtraTests|Dist::Zilla::Plugin::RunExtraTests> instead. The plugin was created because the existing test plugins always run the tests from the build against the build. This makes it impossible to check files that are part of your project but not included in the distribution which can be useful for some tests. Additionally it forces you to include your author tests in the distribution, which, in my opinion, is questionable because the distribution is no longer a working dzil project anyway.
 
-Runs xt tests when the test phase is run (e.g. dzil test, dzil release etc). xt/release, xt/author, and xt/smoke will be tested based on the values of the appropriate environment variables (RELEASE_TESTING, AUTHOR_TESTING, and AUTOMATED_TESTING), which are set by dzil test. Additionally, all other xt files and directories will always be run.
+Runs xt tests when the test phase is run (e.g. dzil test, dzil release etc). xt/release, xt/author, and xt/smoke will be tested based on the values of the appropriate environment variables (RELEASE_TESTING, AUTHOR_TESTING, and EXTENDED_TESTING), which are set by dzil test. Additionally, all other xt files and directories will always be run.
 
 All xt tests are run twice, once against the built distribution and again against the project. The environment variable C<BUILD_TESTING> is set and C<PROJECT_TESTING> is unset if the xt tests are run against the distribution. When the xt tests are run against the project C<PROJECT_TESTING> is set and C<BUILD_TESTING> is unset. If both variables are unset the test is most likely run directly under prove.
 

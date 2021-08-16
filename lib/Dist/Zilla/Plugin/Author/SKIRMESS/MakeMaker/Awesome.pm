@@ -30,8 +30,8 @@ override build => sub {
     my ($self) = @_;
 
     # Needed to run tests under xt/smoke with 'dzil test'
-    $self->log('Setting AUTOMATED_TESTING=1');
-    local $ENV{AUTOMATED_TESTING} = 1;
+    $self->log('Setting EXTENDED_TESTING=1');
+    local $ENV{EXTENDED_TESTING} = 1;
 
     super();
 };
@@ -239,8 +239,8 @@ override test => sub {
     my ($self) = @_;
 
     # Needed to run tests under xt/smoke with 'dzil test'
-    $self->log('Setting AUTOMATED_TESTING=1');
-    local $ENV{AUTOMATED_TESTING} = 1;
+    $self->log('Setting EXTENDED_TESTING=1');
+    local $ENV{EXTENDED_TESTING} = 1;
 
     super();
 };

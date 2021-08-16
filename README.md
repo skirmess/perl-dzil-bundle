@@ -26,7 +26,7 @@ Create a new repository on Github, clone it, and add the following to
 
 # DESCRIPTION
 
-This is a [Dist::Zilla](https://metacpan.org/pod/Dist::Zilla) PluginBundle.
+This is a [Dist::Zilla](https://metacpan.org/pod/Dist%3A%3AZilla) PluginBundle.
 
 The bundle will not be released on CPAN, instead it is designed to be
 used with the Git::Checkout plugin in the project that will use it.
