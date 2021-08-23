@@ -10,9 +10,20 @@ use Moose;
 
 extends 'Dist::Zilla::Plugin::MakeMaker::Awesome';
 
-with 'Dist::Zilla::Role::PPI';
+use MooseX::Types::Moose qw(CodeRef);
 
-has _has_extended_prereqs => (
+has extended_prereqs => (
+    is       => 'ro',
+    isa      => 'CodeRef',
+    required => 1,
+);
+
+has _has_extended_tests => (
+    is      => 'rw',
+    default => 0,
+);
+
+has _has_extended_requirements => (
     is      => 'rw',
     default => 0,
 );
@@ -20,7 +31,6 @@ has _has_extended_prereqs => (
 use CPAN::Meta::Requirements;
 use Data::Dumper;
 use JSON::PP;
-use Perl::PrereqScanner 1.016;
 use Perl::Tidy;
 use Term::ANSIColor qw(colored);
 
@@ -107,13 +117,17 @@ override _dump_as => sub {
 override fill_in_string => sub {
     my ( $self, $content, $data_ref ) = @_;
 
-    if ( $self->_has_extended_prereqs ) {
+    if ( $self->_has_extended_tests ) {
         $data_ref->{add_smoker_test_requirements} = <<'EOF';
 if ( $ENV{AUTOMATED_TESTING} || $ENV{EXTENDED_TESTING} ) {
     $WriteMakefileArgs{test}{TESTS} .= ' xt/smoke/*.t';
-    _add_smoker_test_requirements();
-}
 EOF
+
+        if ( $self->_has_extended_requirements ) {
+            $data_ref->{add_smoker_test_requirements} .= "    _add_smoker_test_requirements();\n";
+        }
+
+        $data_ref->{add_smoker_test_requirements} .= "}\n";
     }
 
     return $self->SUPER::fill_in_string( $content, $data_ref );
@@ -122,9 +136,7 @@ EOF
 override setup_installer => sub {
     my ($self) = @_;
 
-    my $meta_req  = CPAN::Meta::Requirements->new;
-    my $smoke_req = CPAN::Meta::Requirements->new;
-
+    my $meta_req   = CPAN::Meta::Requirements->new;
     my $meta_seen  = 0;
     my $smoke_seen = 0;
     my $makefile_pl;
@@ -132,6 +144,8 @@ override setup_installer => sub {
   FILE:
     for my $file ( @{ $self->zilla->files } ) {
         if ( $file->name eq 'Makefile.PL' ) {
+            $self->log_fatal('Makefile.PL seen twice - internal error') if defined $makefile_pl;
+
             $makefile_pl = $file;
             next FILE;
         }
@@ -155,37 +169,52 @@ override setup_installer => sub {
             next FILE;
         }
 
-        next FILE if $file->name !~ m{ ^ xt/smoke/ }xsm;
+        if ( $file->name =~ m{ ^ xt/smoke/ }xsm ) {
+            $smoke_seen++;
 
-        $smoke_req->add_requirements( Perl::PrereqScanner->new->scan_ppi_document( $self->ppi_document_for_file($file) ) );
-        $smoke_seen++;
+            next FILE;
+        }
     }
 
     $self->log_fatal('META.json not seen')   if !$meta_seen;
     $self->log_fatal('Makefile.PL not seen') if !defined $makefile_pl;
 
-    if ($smoke_seen) {
-        $self->_has_extended_prereqs(1);
+    my %extended_prereqs = %{ $self->extended_prereqs->() };
 
-        # Merge the requirements from META.json into the requirements from the
-        # smoke tests
-        $smoke_req->add_requirements($meta_req);
+    if ( !$smoke_seen ) {
+        $self->log_fatal('No xt/smoke tests but extended prereqs...?') if keys %extended_prereqs;
+    }
+    else {
+        $self->_has_extended_tests(1);
 
-        # Remove the requirements that are the same from the smoke_req - the
-        # other are guaranteed to be bigger or additional ones
-        my $meta_hash  = $meta_req->as_string_hash;
-        my $smoke_hash = $smoke_req->as_string_hash;
+        if ( keys %extended_prereqs ) {
+            my $extended_req = CPAN::Meta::Requirements->from_string_hash( \%extended_prereqs );
 
-      MODULE:
-        for my $module ( keys %{$meta_hash} ) {
-            $self->log_fatal('This should never happen') if !exists $smoke_hash->{$module};
+            # Merge the requirements from META.json into the requirements
+            # from the smoke tests
+            $extended_req->add_requirements($meta_req);
 
-            if ( $smoke_hash->{$module} eq $meta_hash->{$module} ) {
-                delete $smoke_hash->{$module};
+            # Remove the requirements that are the same from the smoke_req - the
+            # other are guaranteed to be bigger or additional ones
+            my $meta_hash     = $meta_req->as_string_hash;
+            my $extended_hash = $extended_req->as_string_hash;
+
+          MODULE:
+            for my $module ( keys %{$meta_hash} ) {
+                $self->log_fatal('This should never happen') if !exists $extended_hash->{$module};
+
+                if ( $extended_hash->{$module} eq $meta_hash->{$module} ) {
+                    delete $extended_hash->{$module};
+                }
             }
-        }
 
-        push @{ $self->footer_strs }, split /\n/, <<'EOF';    ## no critic (RegularExpressions::RequireDotMatchAnything, RegularExpressions::RequireExtendedFormatting, RegularExpressions::RequireLineBoundaryMatching)
+            if ( keys %{$extended_hash} ) {
+
+                # yes, we have to check twice because develop prereqs and
+                # test prereqs can be the same for CPAN::META::Prereqs
+                $self->_has_extended_requirements(1);
+
+                push @{ $self->footer_strs }, split /\n/, <<'EOF';    ## no critic (RegularExpressions::RequireDotMatchAnything, RegularExpressions::RequireExtendedFormatting, RegularExpressions::RequireLineBoundaryMatching)
 sub test_requires {
     my ( $module, $version_or_range ) = @_;
     $WriteMakefileArgs{TEST_REQUIRES}{$module} = $FallbackPrereqs{$module} = $version_or_range;
@@ -195,12 +224,13 @@ sub test_requires {
 sub _add_smoker_test_requirements {
 EOF
 
-        for my $module ( sort keys %{$smoke_hash} ) {
-            push @{ $self->footer_strs }, qq{    test_requires('$module', } . ( $smoke_hash->{$module} eq '0' ? 0 : qq{'$smoke_hash->{$module}'} ) . ');';
+                for my $module ( sort keys %{$extended_hash} ) {
+                    push @{ $self->footer_strs }, qq{    test_requires('$module', } . ( $extended_hash->{$module} eq '0' ? 0 : qq{'$extended_hash->{$module}'} ) . ');';
+                }
+
+                push @{ $self->footer_strs }, '    return;', '}';
+            }
         }
-
-        push @{ $self->footer_strs }, '    return;', '}';
-
     }
 
     super();

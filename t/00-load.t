@@ -11,9 +11,6 @@ use Test::More 0.88;
 use lib qw(lib);
 
 my @modules = qw(
-  Dist::Zilla::Plugin::Author::SKIRMESS::CPANFile::Project
-  Dist::Zilla::Plugin::Author::SKIRMESS::CPANFile::Project::Merge
-  Dist::Zilla::Plugin::Author::SKIRMESS::CPANFile::Project::Prereqs::AuthorDeps
   Dist::Zilla::Plugin::Author::SKIRMESS::CPANFile::Project::Sanitize
   Dist::Zilla::Plugin::Author::SKIRMESS::CheckCopyrightYear
   Dist::Zilla::Plugin::Author::SKIRMESS::CheckFilesInDistribution
@@ -22,7 +19,6 @@ my @modules = qw(
   Dist::Zilla::Plugin::Author::SKIRMESS::MakeMaker::Awesome
   Dist::Zilla::Plugin::Author::SKIRMESS::Manifest::NoChurn
   Dist::Zilla::Plugin::Author::SKIRMESS::MetaJSON::RemoveChurn
-  Dist::Zilla::Plugin::Author::SKIRMESS::MetaJSON::RemoveDevelopPrereqs
   Dist::Zilla::Plugin::Author::SKIRMESS::MetaYAML::RemoveChurn
   Dist::Zilla::Plugin::Author::SKIRMESS::MinimumPerl
   Dist::Zilla::Plugin::Author::SKIRMESS::PromptIfStale::CPANFile::Project

@@ -14,14 +14,19 @@ with qw(
 );
 
 use Carp qw(confess);
+use CPAN::Meta::Prereqs       ();
+use CPAN::Meta::Requirements  ();
 use Dist::Zilla::File::OnDisk ();
 use Dist::Zilla::Types 6.000 qw(Path);
-use File::Temp ();
-use List::Util qw(first);
+use Dist::Zilla::Util                    ();
+use Dist::Zilla::Util::BundleInfo        ();
+use Dist::Zilla::Util::ExpandINI::Reader ();
+use File::Temp                           ();
+use List::Util qw(pairs);
 use Module::CPANfile 1.1004 ();
 use Module::Metadata ();
 use Path::Tiny qw(path);
-use Perl::Critic::MergeProfile;
+use Perl::Critic::MergeProfile ();
 
 use Config::MVP 2.200012 ();    # https://github.com/rjbs/Config-MVP/issues/13
 
@@ -114,17 +119,6 @@ sub configure {
         ],
     );
 
-    # Check at build/release time if modules are out of date
-    $self->add_plugins(
-        [
-            'PromptIfStale', 'PromptIfStale / CPAN::Perl::Releases',
-            {
-                phase  => 'build',
-                module => [qw(CPAN::Perl::Releases)],
-            },
-        ],
-    );
-
     # Create the t/00-load.t test
     $self->add_plugins('Author::SKIRMESS::Test::Load');
 
@@ -161,9 +155,45 @@ sub configure {
     # Decline to build files that appear in a MANIFEST.SKIP-like file
     $self->add_plugins('ManifestSkip');
 
-    # :ExtraTestFiles is empty because we don't add xt test files to the
-    # distribution, that's why we have to create a new ExtraTestFiles
-    # plugin
+    # automatically extract prereqs from your modules
+    #   :InstallModules -> ^lib/.*\.(?:pm|pod)$
+    #   :ExecFiles      -> everything under bin through ExecDir
+    #   :TestFiles      -> ^t/
+    #   :ExtraTestFiles -> ^xt/ (only smoke tests in our case)
+    $self->add_plugins('AutoPrereqs');
+
+    # Detects the minimum version of Perl required for your dist
+    $self->add_plugins('Author::SKIRMESS::MinimumPerl');
+
+    # Smoker prereqs (xt/smoke) are added as develop dependencies by
+    # AutoPrereqs above - save them to a variable because we need them for
+    # the Makefile.PL.
+    my $smoker_requires;
+    $self->add_plugins(
+        [
+            'Code::PrereqSource',
+            'SaveSmokerPrereqs',
+            {
+                register_prereqs => sub {
+                    my ($self) = @_;
+
+                    my $cpan_meta_prereqs = $self->zilla->prereqs->cpan_meta_prereqs;
+
+                    my @types = $cpan_meta_prereqs->types_in('develop');
+                    $self->log_fatal(q{We can only handle 'requires' in 'develop' prereqs}) if @types > 1 || $types[0] ne 'requires';
+
+                    my $cpan_meta_requirements = $self->zilla->prereqs->cpan_meta_prereqs->requirements_for( 'develop', 'requires' );
+                    $smoker_requires = $cpan_meta_requirements->as_string_hash;
+
+                    return;
+                },
+            },
+        ],
+    );
+
+    # :ExtraTestFiles contains only the xt/smoke tests, or is empty, because
+    # we don't add xt test files to the distribution, that's why we have to
+    # create a new ExtraTestFiles plugin
     $self->add_plugins(
         [
             'FinderCode', 'ExtraTestFiles',
@@ -174,12 +204,25 @@ sub configure {
         ],
     );
 
-    # automatically extract prereqs from your modules
+    # Scan again for prereqs but include the author and release tests from
+    # the Git project.
+    #
+    # We have to scan everything again because the modules provided by this
+    # distribution aren't saved and if we would only scan the author and
+    # release tests we would add dependencies on this distributions modules.
+    #
+    #   :InstallModules -> ^lib/.*\.(?:pm|pod)$
+    #   :ExecFiles      -> everything under bin through ExecDir
+    #   :TestFiles      -> ^t/
+    #   :ExtraTestFiles -> ^xt/ (only smoke tests in our case)
+    #   @Author::SKIRMESS/ExtraTestFiles
+    #                   -> everything under xt in the project (not the dist)
     $self->add_plugins(
         [
             'AutoPrereqs',
+            'AutoPrereqs/WithAuthorAndReleaseTests',
             {
-                develop_finder => ['@Author::SKIRMESS/ExtraTestFiles'],    ## no critic (ValuesAndExpressions::RequireInterpolationOfMetachars)
+                develop_finder => [qw( :ExtraTestFiles @Author::SKIRMESS/ExtraTestFiles)],
             },
         ],
     );
@@ -206,13 +249,38 @@ sub configure {
         );
     }
 
+    # Remove the develop prereqs and save them to a variable
+    my $develop_requires_prereqs;
+    $self->add_plugins(
+        [
+            'Code::PrereqSource',
+            'SaveAndRemoveDevelopPrereqs',
+            {
+                register_prereqs => sub {
+                    my ($self) = @_;
+
+                    my $cpan_meta_prereqs = $self->zilla->prereqs->cpan_meta_prereqs;
+
+                    my @types = $cpan_meta_prereqs->types_in('develop');
+                    $self->log_fatal(q{We can only handle 'requires' in 'develop' prereqs}) if @types > 1 || $types[0] ne 'requires';
+
+                    my $cpan_meta_requirements = $self->zilla->prereqs->cpan_meta_prereqs->requirements_for( 'develop', 'requires' );
+                    $develop_requires_prereqs = $cpan_meta_requirements->clone;
+
+                    for my $module ( keys %{ $cpan_meta_requirements->as_string_hash } ) {
+                        $cpan_meta_requirements->clear_requirement($module);
+                    }
+
+                    return;
+                },
+            },
+        ],
+    );
+
     # Set script shebang to #!perl
     if ( $self->set_script_shebang ) {
         $self->add_plugins('SetScriptShebang');
     }
-
-    # Detects the minimum version of Perl required for your dist
-    $self->add_plugins('Author::SKIRMESS::MinimumPerl');
 
     # Stop CPAN from indexing stuff
     $self->add_plugins(
@@ -247,31 +315,11 @@ sub configure {
         ],
     );
 
-    # Extract namespaces/version from traditional packages for provides
-    $self->add_plugins('MetaProvides::Package');
-
-    # Extract namespaces/version from traditional packages for provides
-    #
-    # This adds packages found in scripts under bin which are skipped
-    # by the default finder of MetaProvides::Package above.
-    $self->add_plugins(
-        [
-            'MetaProvides::Package', 'MetaProvides::Package/ExecFiles',
-            {
-                meta_noindex => 1,
-                finder       => ':ExecFiles',
-            },
-        ],
-    );
-
     # Produce a META.yml
     $self->add_plugins('MetaYAML');
 
     # Produce a META.json
     $self->add_plugins('MetaJSON');
-
-    # Remove develop prereqs from META.json file
-    $self->add_plugins('Author::SKIRMESS::MetaJSON::RemoveDevelopPrereqs');
 
     # Remove generated_by from META.yml to reduce repository churn
     $self->add_plugins('Author::SKIRMESS::MetaYAML::RemoveChurn');
@@ -279,57 +327,148 @@ sub configure {
     # Remove generated_by from META.json to reduce repository churn
     $self->add_plugins('Author::SKIRMESS::MetaJSON::RemoveChurn');
 
-    # create a cpanfile in the project
-    $self->add_plugins('Author::SKIRMESS::CPANFile::Project');
-
-    # Add Dist::Zilla authordeps prereqs as develop dependencies with
-    # feature dzil to the cpanfile in the project
-    my $cpanfile_feature             = 'dzil';
-    my $cpanfile_feature_description = 'Dist::Zilla';
-    my $bundle_lib_dir               = $self->_bundle_checkout_path->child('lib');
-    my @bundle_packages              = sort keys %{ Module::Metadata->package_versions_from_directory($bundle_lib_dir) };
+    # Create a cpanfile in the project root, but not in the distribution.
+    my $_bundle_checkout_path = $self->_bundle_checkout_path;
     $self->add_plugins(
         [
-            'Author::SKIRMESS::CPANFile::Project::Prereqs::AuthorDeps',
+            'Code::AfterBuild',
+            'CPANfile',
             {
-                expand_bundle => [ grep { m{ ^ Dist :: Zilla :: PluginBundle :: }xsm } @bundle_packages ],
-                skip          => [ grep { !m{ ^ Dist :: Zilla :: PluginBundle :: }xsm } @bundle_packages ],
-                (
-                    $self_build
-                    ? ()
-                    : (
-                        feature             => $cpanfile_feature,
-                        feature_description => $cpanfile_feature_description,
-                    ),
-                ),
+                after_build => sub {
+                    my ( $self, $payload ) = @_;
+
+                    # Merge prereqs with removed develop prereqs. These will
+                    # be the runtime, test and develop entries of the
+                    # cpanfile. The dependencies for xt/smoker, xt/author,
+                    # and xt/release are under develop.
+                    my $cpanfile_project_develop_prereqs = $self->zilla->prereqs->cpan_meta_prereqs->clone->with_merged_prereqs(
+                        CPAN::Meta::Prereqs->new(
+                            {
+                                develop => { requires => $develop_requires_prereqs->as_string_hash },
+                            },
+                        ),
+                    );
+
+                    # For non-self builds add the runtime requirements of the
+                    # bundle as develop requirements (feature dzil)
+                    my $cpanfile_project_develop_feature_dzil_req;
+                    if ($self_build) {
+
+                        # We are the bundle - nothing to add
+                        $cpanfile_project_develop_feature_dzil_req = CPAN::Meta::Requirements->new;
+                    }
+                    else {
+                        # Add runtime prereqs from the bundle
+                        my $cpanfile_obj = Module::CPANfile->load( $_bundle_checkout_path->child('cpanfile') );
+                        $cpanfile_project_develop_feature_dzil_req = $cpanfile_obj->prereqs->requirements_for( 'runtime', 'requires' )->clone;
+                    }
+
+                    # Add Dist::Zilla as develop dependency (feature dzil)
+                    $cpanfile_project_develop_feature_dzil_req->add_minimum( 'Dist::Zilla', 0 );
+
+                    # Find all packages in the bundle
+                    my @bundle_packages = sort keys %{ Module::Metadata->package_versions_from_directory( $_bundle_checkout_path->child('lib')->stringify ) };
+
+                    # The bundles to expand (this bundle)
+                    my %bundle_to_expand = map { $_ => 1 } grep { m{ ^ Dist :: Zilla :: PluginBundle :: }xsm } @bundle_packages;
+
+                    # Plugins to not depend on because they are in the bundle
+                    my %skip = map { $_ => 1 } grep { !m{ ^ Dist :: Zilla :: PluginBundle :: }xsm } @bundle_packages;
+
+                    # Add requirements from dist.ini as develop requirements
+                    # (feature dzil)
+                    my $dist_ini = path( $self->zilla->root )->child('dist.ini');
+                    $self->log_fatal("File '$dist_ini' does not exist") if !-f $dist_ini;
+
+                    my $reader = Dist::Zilla::Util::ExpandINI::Reader->new();
+                  SECTION:
+                    for my $section ( @{ $reader->read_file( $dist_ini->stringify ) } ) {
+                        my $version = _get_version_from_section( $section->{lines} );
+
+                        if ( $section->{name} eq '_' ) {
+
+                            # Add Dist::Zilla
+                            $cpanfile_project_develop_feature_dzil_req->add_minimum( 'Dist::Zilla', $version );
+                            next SECTION;
+                        }
+
+                        my $package_name = Dist::Zilla::Util->expand_config_package_name( $section->{package} );
+                        next SECTION if exists $skip{$package_name};
+
+                        if ( $section->{package} !~ m{ ^ [@] }msx ) {
+
+                            # Add plugin
+                            $cpanfile_project_develop_feature_dzil_req->add_minimum( $package_name, $version );
+                            next SECTION;
+                        }
+
+                        if ( !exists $bundle_to_expand{$package_name} ) {
+
+                            # Add bundle
+                            $cpanfile_project_develop_feature_dzil_req->add_minimum( $package_name, $version );
+                            next SECTION;
+                        }
+
+                        # Add expanded bundle
+
+                        # Bundles inside the bundle are expanded automatically, because
+                        # BundleInfo loads the bundle through the official API.
+                        my $bundle = Dist::Zilla::Util::BundleInfo->new(
+                            bundle_name    => $section->{package},
+                            bundle_payload => $section->{lines},
+                        );
+
+                      PLUGIN:
+                        for my $plugin ( $bundle->plugins ) {
+                            $package_name = $plugin->module;
+                            next PLUGIN if exists $skip{$package_name};
+
+                            # payload_list calls _autoexpand_list which is broken and fails
+                            # if a value is a code ref, we have to create the list ourself
+                            my $plugin_payload = $plugin->payload;
+                            my @payload_list;
+                          KEY:
+                            for my $key ( sort keys %{$plugin_payload} ) {
+                                my $value = $plugin_payload->{$key};
+                                if ( ref $value eq ref sub { } ) {
+                                    push @payload_list, $key, $value;
+                                }
+                                else {
+                                    push @payload_list, $plugin->_autoexpand_list( $key, $value );
+                                }
+                            }
+
+                            $version = _get_version_from_section( \@payload_list );
+                            $cpanfile_project_develop_feature_dzil_req->add_minimum( $package_name, $version );
+                        }
+                    }
+
+                    # ref $cpanfile_project_develop_prereqs          = "CPAN::Meta::Prereqs"
+                    # ref $cpanfile_project_develop_feature_dzil_req = "CPAN::Meta::Requirements"
+
+                    if ($self_build) {
+                        $cpanfile_project_develop_prereqs = $cpanfile_project_develop_prereqs->with_merged_prereqs(
+                            CPAN::Meta::Prereqs->new(
+                                {
+                                    develop => { requires => $cpanfile_project_develop_feature_dzil_req->as_string_hash },
+                                },
+                            ),
+                        );
+                    }
+
+                    my $cpanfile_str = Module::CPANfile->from_prereqs( $cpanfile_project_develop_prereqs->as_string_hash )->to_string;
+
+                    if ( !$self_build ) {
+                        $cpanfile_str .= "feature 'dzil', 'Dist::Zilla' => sub {\n";
+                        $cpanfile_str .= Module::CPANfile->from_prereqs( { develop => { requires => $cpanfile_project_develop_feature_dzil_req->as_string_hash } } )->to_string;
+                        $cpanfile_str .= "};\n";
+                    }
+
+                    path( $self->zilla->root )->child('cpanfile')->spew($cpanfile_str);
+                },
             },
         ],
     );
-
-    if ( !$self_build ) {
-
-        # Save runtime dependencies of bundle to a temporary file which will be
-        # used by Author::SKIRMESS::CPANFile::Project::Merge to add these
-        # dependencies to develop/dzil dependencies of the project cpanfile
-        my $bundle_cpanfile                 = $self->_bundle_checkout_path->child('cpanfile');
-        my $cpanfile_obj                    = Module::CPANfile->load($bundle_cpanfile);
-        my $runtime_prereqs                 = $cpanfile_obj->prereqs->as_string_hash->{runtime};
-        my $bundle_runtime_prereqs_cpanfile = $self->_tempfile();
-        Module::CPANfile->from_prereqs( { develop => $runtime_prereqs } )->save($bundle_runtime_prereqs_cpanfile);
-
-        # merge a cpanfile into the cpanfile in the project
-        $self->add_plugins(
-            [
-                'Author::SKIRMESS::CPANFile::Project::Merge',
-                {
-                    source              => $bundle_runtime_prereqs_cpanfile,
-                    feature             => $cpanfile_feature,
-                    feature_description => $cpanfile_feature_description,
-                },
-            ],
-        );
-
-    }
 
     # Remove double-declared entries from the cpanfile in the project
     $self->add_plugins('Author::SKIRMESS::CPANFile::Project::Sanitize');
@@ -393,16 +532,14 @@ sub configure {
     # Install a directory's contents as "ShareDir" content
     $self->add_plugins('ShareDir');
 
-    # Set dynamic_config to true in META.* files if we have xt/smoke files
-    # (that is not correct if the files under xt/smoke do not add new
-    # dependencies)
+    # Set dynamic_config to true in META.* files if we have smoker prereqs
     $self->add_plugins(
         [
             'Code::MetaProvider',
             {
                 metadata => sub {
                     my ($self) = @_;
-                    if ( first { $_->name =~ m{ ^ xt/smoke/ }xsm } @{ $self->zilla->files } ) {
+                    if ( keys %{$smoker_requires} ) {
                         return +{ dynamic_config => 1 };
                     }
 
@@ -418,7 +555,8 @@ sub configure {
         [
             'Author::SKIRMESS::MakeMaker::Awesome',
             {
-                test_file => 't/*.t',
+                test_file        => 't/*.t',
+                extended_prereqs => sub { return $smoker_requires },
             },
         ],
     );
@@ -567,12 +705,29 @@ sub _find_files_extra_tests_files {
   FILE:
     while ( defined( my $file = $it->() ) ) {
         next FILE if !-f $file;
-        next FILE if $file !~ m{ [.] t $ }xsm;
+        next FILE if $file !~ m{ [.] (?: t | pm ) $ }xsm;
 
         push @files, Dist::Zilla::File::OnDisk->new( { name => $file->absolute->stringify } );
     }
 
     return \@files;
+}
+
+sub _get_version_from_section {
+
+    #my ( $self, $lines_ref ) = @_;
+    my ($lines_ref) = @_;
+
+    my $version = 0;
+
+  LINE:
+    for my $line_ref ( pairs @{$lines_ref} ) {
+        my ( $key, $value ) = @{$line_ref};
+        next LINE unless $key eq ':version';
+        $version = $value;
+    }
+
+    return $version;
 }
 
 sub log {    ## no critic (Subroutines::ProhibitBuiltinHomonyms)

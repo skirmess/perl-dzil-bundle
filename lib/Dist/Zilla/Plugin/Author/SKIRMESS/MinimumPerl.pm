@@ -22,6 +22,7 @@ sub register_prereqs {
     $self->_scan_files( 'runtime',   ':InstallModules', ':ExecFiles' );
     $self->_scan_files( 'configure', ':IncModules' );
     $self->_scan_files( 'test',      ':TestFiles' );
+    $self->_scan_files( 'develop',   ':ExtraTestFiles' );
 
     return;
 }
