@@ -22,11 +22,14 @@ use Dist::Zilla::Util                    ();
 use Dist::Zilla::Util::BundleInfo        ();
 use Dist::Zilla::Util::ExpandINI::Reader ();
 use File::Temp                           ();
+use JSON::PP                             ();
 use List::Util qw(pairs);
 use Module::CPANfile 1.1004 ();
 use Module::Metadata ();
 use Path::Tiny qw(path);
 use Perl::Critic::MergeProfile ();
+use Scalar::Util qw(blessed);
+use YAML::Tiny qw();
 
 use Config::MVP 2.200012 ();    # https://github.com/rjbs/Config-MVP/issues/13
 
@@ -318,14 +321,84 @@ sub configure {
     # Produce a META.yml
     $self->add_plugins('MetaYAML');
 
+    # Remove churn from META.yml
+    $self->add_plugins(
+        [
+            'Code::FileMunger',
+            'MetaYAML/RemoveChurn',
+            {
+                munge_file => sub {
+                    my ( $self, $file ) = @_;
+
+                    return if $file->name ne 'META.yml';
+
+                    $self->log_fatal( q{'} . $file->name . q{' is not a 'Dist::Zilla::File::FromCode'} ) if blessed($file) ne 'Dist::Zilla::File::FromCode';
+
+                    my $orig_coderef = $file->code();
+                    $file->code(
+                        sub {
+                            $self->log_debug( [ 'Removing churn from %s', $file->name ] );
+
+                            my $meta_yaml = YAML::Tiny->read_string( $file->$orig_coderef() );
+                            delete $meta_yaml->[0]->{generated_by};
+                            delete $meta_yaml->[0]->{x_generated_by_perl};
+                            delete $meta_yaml->[0]->{x_serialization_backend};
+
+                            # force this to be numeric - for whatever reason YAML::Tiny
+                            # converts it to a string otherwise
+                            if ( exists $meta_yaml->[0]->{dynamic_config} ) {
+                                $meta_yaml->[0]->{dynamic_config} = $meta_yaml->[0]->{dynamic_config} + 0;
+                            }
+
+                            my $content = $meta_yaml->write_string;
+                            return $content;
+                        },
+                    );
+
+                    return;
+                },
+            },
+        ],
+    );
+
     # Produce a META.json
     $self->add_plugins('MetaJSON');
 
-    # Remove generated_by from META.yml to reduce repository churn
-    $self->add_plugins('Author::SKIRMESS::MetaYAML::RemoveChurn');
+    # Remove churn from META.json
+    $self->add_plugins(
+        [
+            'Code::FileMunger',
+            'MetaJSON/RemoveChurn',
+            {
+                munge_file => sub {
+                    my ( $self, $file ) = @_;
 
-    # Remove generated_by from META.json to reduce repository churn
-    $self->add_plugins('Author::SKIRMESS::MetaJSON::RemoveChurn');
+                    return if $file->name ne 'META.json';
+
+                    $self->log_fatal( q{'} . $file->name . q{' is not a 'Dist::Zilla::File::FromCode'} ) if blessed($file) ne 'Dist::Zilla::File::FromCode';
+
+                    my $orig_coderef = $file->code();
+                    $file->code(
+                        sub {
+                            $self->log_debug( [ 'Removing churn from %s', $file->name ] );
+
+                            my $json = JSON::PP->new->canonical->pretty->ascii;
+
+                            my $meta_json = $json->decode( $file->$orig_coderef() );
+                            delete $meta_json->{generated_by};
+                            delete $meta_json->{x_generated_by_perl};
+                            delete $meta_json->{x_serialization_backend};
+
+                            my $content = $json->encode($meta_json) . "\n";
+                            return $content;
+                        },
+                    );
+
+                    return;
+                },
+            },
+        ],
+    );
 
     # Create a cpanfile in the project root, but not in the distribution.
     my $_bundle_checkout_path = $self->_bundle_checkout_path;
@@ -513,9 +586,20 @@ sub configure {
     # remove whitespace at end of line
     $self->add_plugins(
         [
-            'Author::SKIRMESS::RemoveWhitespaceFromEndOfLine',
+            'Code::FileMunger',
+            'RemoveWhitespaceFromEndOfLine',
             {
-                file => [qw(README)],
+                munge_file => sub {
+                    my ( $self, $file ) = @_;
+
+                    return if $file->name ne 'README';
+
+                    my $content = $file->content;
+                    $content =~ s{ [ \t]+ \n }{\n}xsmg;
+                    $file->content($content);
+
+                    return;
+                },
             },
         ],
     );
