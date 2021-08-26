@@ -17,7 +17,6 @@ my @modules = qw(
   Dist::Zilla::Plugin::Author::SKIRMESS::ContributingGuide
   Dist::Zilla::Plugin::Author::SKIRMESS::CopyAllFilesFromDistributionToProject
   Dist::Zilla::Plugin::Author::SKIRMESS::MakeMaker::Awesome
-  Dist::Zilla::Plugin::Author::SKIRMESS::Manifest::NoChurn
   Dist::Zilla::Plugin::Author::SKIRMESS::MinimumPerl
   Dist::Zilla::Plugin::Author::SKIRMESS::PromptIfStale::CPANFile::Project
   Dist::Zilla::Plugin::Author::SKIRMESS::RunExtraTests::FromProject

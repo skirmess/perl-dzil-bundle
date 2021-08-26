@@ -8,7 +8,6 @@ requires 'Data::Dumper';
 requires 'Dist::Zilla::File::InMemory';
 requires 'Dist::Zilla::File::OnDisk';
 requires 'Dist::Zilla::Plugin::MakeMaker::Awesome';
-requires 'Dist::Zilla::Plugin::Manifest';
 requires 'Dist::Zilla::Plugin::PromptIfStale';
 requires 'Dist::Zilla::Role::AfterBuild';
 requires 'Dist::Zilla::Role::AfterRelease';
@@ -74,7 +73,7 @@ on develop => sub {
     requires 'Dist::Zilla::Plugin::CheckSelfDependency';
     requires 'Dist::Zilla::Plugin::CheckStrictVersion';
     requires 'Dist::Zilla::Plugin::Code::AfterBuild';
-    requires 'Dist::Zilla::Plugin::Code::FileMunger';
+    requires 'Dist::Zilla::Plugin::Code::FileMunger', '0.007';
     requires 'Dist::Zilla::Plugin::Code::MetaProvider';
     requires 'Dist::Zilla::Plugin::Code::PrereqSource';
     requires 'Dist::Zilla::Plugin::ConfirmRelease';
@@ -91,6 +90,7 @@ on develop => sub {
     requires 'Dist::Zilla::Plugin::Git::Tag';
     requires 'Dist::Zilla::Plugin::GithubMeta';
     requires 'Dist::Zilla::Plugin::License';
+    requires 'Dist::Zilla::Plugin::Manifest';
     requires 'Dist::Zilla::Plugin::ManifestSkip';
     requires 'Dist::Zilla::Plugin::MetaJSON';
     requires 'Dist::Zilla::Plugin::MetaNoIndex';
