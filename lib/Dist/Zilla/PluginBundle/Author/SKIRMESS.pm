@@ -340,7 +340,7 @@ sub configure {
                             $self->log_debug( [ 'Removing churn from %s', $file->name ] );
 
                             my $meta_yaml = YAML::Tiny->read_string( $file->$orig_coderef() );
-                            delete $meta_yaml->[0]->{generated_by};
+                            $meta_yaml->[0]->{generated_by} =~ s{ \s+ version \s+ .+? ( , | $ ) }{$1}xsmg;
                             delete $meta_yaml->[0]->{x_generated_by_perl};
                             delete $meta_yaml->[0]->{x_serialization_backend};
 
@@ -385,7 +385,7 @@ sub configure {
                             my $json = JSON::PP->new->canonical->pretty->ascii;
 
                             my $meta_json = $json->decode( $file->$orig_coderef() );
-                            delete $meta_json->{generated_by};
+                            $meta_json->{generated_by} =~ s{ \s+ version \s+ .+? ( , | $ ) }{$1}xsmg;
                             delete $meta_json->{x_generated_by_perl};
                             delete $meta_json->{x_serialization_backend};
 
