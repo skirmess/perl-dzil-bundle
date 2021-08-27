@@ -414,7 +414,7 @@ sub configure {
                     # be the runtime, test and develop entries of the
                     # cpanfile. The dependencies for xt/smoker, xt/author,
                     # and xt/release are under develop.
-                    my $cpanfile_project_develop_prereqs = $self->zilla->prereqs->cpan_meta_prereqs->clone->with_merged_prereqs(
+                    my $cpanfile_project_prereqs = $self->zilla->prereqs->cpan_meta_prereqs->clone->with_merged_prereqs(
                         CPAN::Meta::Prereqs->new(
                             {
                                 develop => { requires => $develop_requires_prereqs->as_string_hash },
@@ -422,27 +422,26 @@ sub configure {
                         ),
                     );
 
-                    # For non-self builds add the runtime requirements of the
-                    # bundle as develop requirements (feature dzil)
-                    my $cpanfile_project_develop_feature_dzil_req;
+                    # Requirements of the SKIRMESS bundle
+                    my $dzil_req;
                     if ($self_build) {
 
-                        # We are the bundle - nothing to add
-                        $cpanfile_project_develop_feature_dzil_req = CPAN::Meta::Requirements->new;
+                        # We are the bundle - start with nothing
+                        $dzil_req = CPAN::Meta::Requirements->new;
                     }
                     else {
                         # Add runtime prereqs from the bundle
                         my $cpanfile_obj = Module::CPANfile->load( $_bundle_checkout_path->child('cpanfile') );
-                        $cpanfile_project_develop_feature_dzil_req = $cpanfile_obj->prereqs->requirements_for( 'runtime', 'requires' )->clone;
+                        $dzil_req = $cpanfile_obj->prereqs->requirements_for( 'runtime', 'requires' )->clone;
                     }
 
-                    # Add Dist::Zilla as develop dependency (feature dzil)
-                    $cpanfile_project_develop_feature_dzil_req->add_minimum( 'Dist::Zilla', 0 );
+                    # Add Dist::Zilla as dependency
+                    $dzil_req->add_minimum( 'Dist::Zilla', 0 );
 
                     # Find all packages in the bundle
                     my @bundle_packages = sort keys %{ Module::Metadata->package_versions_from_directory( $_bundle_checkout_path->child('lib')->stringify ) };
 
-                    # The bundles to expand (this bundle)
+                    # The bundles to expand (the SKIRMESS bundle)
                     my %bundle_to_expand = map { $_ => 1 } grep { m{ ^ Dist :: Zilla :: PluginBundle :: }xsm } @bundle_packages;
 
                     # Plugins to not depend on because they are in the bundle
@@ -450,7 +449,8 @@ sub configure {
 
                     # Add requirements from dist.ini as develop requirements
                     # (feature dzil)
-                    my $dist_ini = path( $self->zilla->root )->child('dist.ini');
+                    my $dzil_dev_req = CPAN::Meta::Requirements->new;
+                    my $dist_ini     = path( $self->zilla->root )->child('dist.ini');
                     $self->log_fatal("File '$dist_ini' does not exist") if !-f $dist_ini;
 
                     my $reader = Dist::Zilla::Util::ExpandINI::Reader->new();
@@ -461,7 +461,7 @@ sub configure {
                         if ( $section->{name} eq '_' ) {
 
                             # Add Dist::Zilla
-                            $cpanfile_project_develop_feature_dzil_req->add_minimum( 'Dist::Zilla', $version );
+                            $dzil_dev_req->add_minimum( 'Dist::Zilla', $version );
                             next SECTION;
                         }
 
@@ -471,14 +471,14 @@ sub configure {
                         if ( $section->{package} !~ m{ ^ [@] }msx ) {
 
                             # Add plugin
-                            $cpanfile_project_develop_feature_dzil_req->add_minimum( $package_name, $version );
+                            $dzil_dev_req->add_minimum( $package_name, $version );
                             next SECTION;
                         }
 
                         if ( !exists $bundle_to_expand{$package_name} ) {
 
                             # Add bundle
-                            $cpanfile_project_develop_feature_dzil_req->add_minimum( $package_name, $version );
+                            $dzil_dev_req->add_minimum( $package_name, $version );
                             next SECTION;
                         }
 
@@ -512,28 +512,29 @@ sub configure {
                             }
 
                             $version = _get_version_from_section( \@payload_list );
-                            $cpanfile_project_develop_feature_dzil_req->add_minimum( $package_name, $version );
+                            $dzil_req->add_minimum( $package_name, $version );
                         }
                     }
 
-                    # ref $cpanfile_project_develop_prereqs          = "CPAN::Meta::Prereqs"
-                    # ref $cpanfile_project_develop_feature_dzil_req = "CPAN::Meta::Requirements"
+                    # ref $cpanfile_project_prereqs = "CPAN::Meta::Prereqs"
+                    # ref $dzil_req                 = "CPAN::Meta::Requirements"
 
                     if ($self_build) {
-                        $cpanfile_project_develop_prereqs = $cpanfile_project_develop_prereqs->with_merged_prereqs(
+                        $cpanfile_project_prereqs = $cpanfile_project_prereqs->with_merged_prereqs(
                             CPAN::Meta::Prereqs->new(
                                 {
-                                    develop => { requires => $cpanfile_project_develop_feature_dzil_req->as_string_hash },
+                                    runtime => { requires => $dzil_req->as_string_hash },
+                                    develop => { requires => $dzil_dev_req->as_string_hash },
                                 },
                             ),
                         );
                     }
 
-                    my $cpanfile_str = Module::CPANfile->from_prereqs( $cpanfile_project_develop_prereqs->as_string_hash )->to_string;
+                    my $cpanfile_str = Module::CPANfile->from_prereqs( $cpanfile_project_prereqs->as_string_hash )->to_string;
 
                     if ( !$self_build ) {
                         $cpanfile_str .= "feature 'dzil', 'Dist::Zilla' => sub {\n";
-                        $cpanfile_str .= Module::CPANfile->from_prereqs( { develop => { requires => $cpanfile_project_develop_feature_dzil_req->as_string_hash } } )->to_string;
+                        $cpanfile_str .= Module::CPANfile->from_prereqs( { develop => { requires => $dzil_req->as_string_hash } } )->to_string;
                         $cpanfile_str .= "};\n";
                     }
 
@@ -694,7 +695,7 @@ sub configure {
                     $self->log_fatal(q{Multiple 'MANIFEST' found}) if @files > 1;
 
                     my ($file) = @files;
-                    $self->log_fatal( [ "File '%s' is of type 'bytes'", $file->name ] ) if !$file->is_bytes;
+                    $self->log_fatal( [ q{File '%s' is of type 'bytes'}, $file->name ] ) if !$file->is_bytes;
 
                     my $orig_coderef = $file->code();
                     $file->code(
