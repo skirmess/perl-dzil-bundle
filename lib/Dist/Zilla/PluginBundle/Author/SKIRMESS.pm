@@ -438,14 +438,11 @@ sub configure {
                     # Add Dist::Zilla as dependency
                     $dzil_req->add_minimum( 'Dist::Zilla', 0 );
 
-                    # Find all packages in the bundle
-                    my @bundle_packages = sort keys %{ Module::Metadata->package_versions_from_directory( $_bundle_checkout_path->child('lib')->stringify ) };
-
-                    # The bundles to expand (the SKIRMESS bundle)
-                    my %bundle_to_expand = map { $_ => 1 } grep { m{ ^ Dist :: Zilla :: PluginBundle :: }xsm } @bundle_packages;
-
                     # Plugins to not depend on because they are in the bundle
-                    my %skip = map { $_ => 1 } grep { !m{ ^ Dist :: Zilla :: PluginBundle :: }xsm } @bundle_packages;
+                    my %dzil_bundle_package = map { $_ => 1 }
+                      grep { !m{ ^ Dist :: Zilla :: PluginBundle :: }xsm }
+                      sort
+                      keys %{ Module::Metadata->package_versions_from_directory( $_bundle_checkout_path->child('lib')->stringify ) };
 
                     # Add requirements from dist.ini as develop requirements
                     # (feature dzil)
@@ -466,7 +463,7 @@ sub configure {
                         }
 
                         my $package_name = Dist::Zilla::Util->expand_config_package_name( $section->{package} );
-                        next SECTION if exists $skip{$package_name};
+                        next SECTION if exists $dzil_bundle_package{$package_name};
 
                         if ( $section->{package} !~ m{ ^ [@] }msx ) {
 
@@ -475,7 +472,7 @@ sub configure {
                             next SECTION;
                         }
 
-                        if ( !exists $bundle_to_expand{$package_name} ) {
+                        if ( $package_name ne __PACKAGE__ ) {
 
                             # Add bundle
                             $dzil_dev_req->add_minimum( $package_name, $version );
@@ -494,7 +491,7 @@ sub configure {
                       PLUGIN:
                         for my $plugin ( $bundle->plugins ) {
                             $package_name = $plugin->module;
-                            next PLUGIN if exists $skip{$package_name};
+                            next PLUGIN if exists $dzil_bundle_package{$package_name};
 
                             # payload_list calls _autoexpand_list which is broken and fails
                             # if a value is a code ref, we have to create the list ourself
