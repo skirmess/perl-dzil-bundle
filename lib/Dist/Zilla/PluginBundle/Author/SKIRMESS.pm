@@ -534,7 +534,11 @@ sub configure {
 
                     if ( !$self_build ) {
                         $cpanfile_str .= "feature 'dzil', 'Dist::Zilla' => sub {\n";
-                        $cpanfile_str .= Module::CPANfile->from_prereqs( { develop => { requires => $dzil_req->as_string_hash } } )->to_string;
+                        $cpanfile_str .= Module::CPANfile->from_prereqs(
+                            {
+                                develop => { requires => $dzil_req->clone->add_requirements($dzil_dev_req)->as_string_hash },
+                            },
+                        )->to_string;
                         $cpanfile_str .= "};\n";
                     }
 
