@@ -74,6 +74,7 @@ requires 'File::pushd';
 requires 'JSON::PP';
 requires 'List::Util';
 requires 'Module::CPANfile', '1.1004';
+requires 'Module::CoreList', '2.77';
 requires 'Module::Metadata';
 requires 'Moose', '0.99';
 requires 'Moose::Role';
@@ -90,6 +91,7 @@ requires 'constant';
 requires 'namespace::autoclean', '0.09';
 requires 'perl', '5.010';
 requires 'strict';
+requires 'version', '0.77';
 requires 'warnings';
 
 on configure => sub {

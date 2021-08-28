@@ -24,12 +24,15 @@ use Dist::Zilla::Util::ExpandINI::Reader ();
 use File::Temp                           ();
 use JSON::PP                             ();
 use List::Util qw(pairs);
+use Module::CoreList 2.77   ();
 use Module::CPANfile 1.1004 ();
 use Module::Metadata ();
 use Path::Tiny qw(path);
 use Perl::Critic::MergeProfile ();
 use Scalar::Util qw(blessed);
+use Term::ANSIColor qw(colored);
 use YAML::Tiny qw();
+use version 0.77;
 
 use Config::MVP 2.200012 ();    # https://github.com/rjbs/Config-MVP/issues/13
 
@@ -302,6 +305,122 @@ sub configure {
             'GithubMeta',
             {
                 issues => 1,
+            },
+        ],
+    );
+
+    # Check for non-core dependencies
+    my $latest_perl_known_to_module_corelist = ( sort map { version->new($_) } keys %Module::CoreList::released )[-1]->numify;
+    $self->add_plugins(
+        [
+            'Code::AfterBuild',
+            'DependenciesAreInCore',
+            {
+                after_build => sub {
+                    my ( $self, $payload ) = @_;
+
+                    my $prereqs = $self->zilla->prereqs->cpan_meta_prereqs;
+
+                    my $req_hash = $prereqs->requirements_for( 'runtime', 'requires' )->clone->add_requirements( $prereqs->requirements_for( 'configure', 'requires' ) )->as_string_hash;
+
+                    my @modules_core;
+                    my @modules_not_core;
+                  MODULE:
+                    for my $module ( sort keys %{$req_hash} ) {
+                        next MODULE if $module eq 'perl';
+
+                        my $version = $req_hash->{$module};
+
+                        if ( Module::CoreList->is_core( $module, undef, $latest_perl_known_to_module_corelist ) ) {
+                            push @modules_core, [ lc($module), version->new( Module::CoreList->first_release( $module, $version ) ), $module, $version ];
+                        }
+                        else {
+                            push @modules_not_core, [ lc($module), $module, $version ];
+                        }
+                    }
+
+                    for my $module_ref ( sort { $a->[1] <=> $b->[1] || $a->[0] cmp $b->[0] } @modules_core ) {
+                        my $name = $module_ref->[2];
+                        if ( $module_ref->[3] ne '0' ) {
+                            $name .= " $module_ref->[3]";
+                        }
+
+                        $self->log( "Dependency $name (core since " . $module_ref->[1]->normal . ')' );
+                    }
+
+                    for my $module_ref ( sort { $a->[0] cmp $b->[0] } @modules_not_core ) {
+                        my $name = $module_ref->[1];
+                        if ( $module_ref->[2] ne '0' ) {
+                            $name .= " $module_ref->[2]";
+                        }
+
+                        $self->log( colored( "Dependency $name (not in core)", 'magenta' ) );
+                    }
+                },
+            },
+        ],
+    );
+
+    # Check if tests add a non-core dependency
+    $self->add_plugins(
+        [
+            'Code::AfterBuild',
+            'TestDependenciesAreInCore',
+            {
+                after_build => sub {
+                    my ( $self, $payload ) = @_;
+
+                    my $prereqs = $self->zilla->prereqs->cpan_meta_prereqs;
+
+                    my $req = $prereqs->requirements_for( 'runtime', 'requires' )->clone->add_requirements( $prereqs->requirements_for( 'configure', 'requires' ) );
+
+                    my $req_test = $prereqs->requirements_for( 'test', 'requires' );
+
+                    my $req_hash     = $req->as_string_hash;
+                    my $req_all_hash = $req_test->clone->add_requirements($req)->as_string_hash;
+
+                    for my $module ( keys %{$req_hash} ) {
+                        $self->log_fatal("internal error: module = $module") if !exists $req_all_hash->{$module};
+
+                        if ( $req_hash->{$module} eq $req_all_hash->{$module} ) {
+                            delete $req_all_hash->{$module};
+                        }
+                    }
+
+                    my @modules_core;
+                    my @modules_not_core;
+                  MODULE:
+                    for my $module ( sort keys %{$req_all_hash} ) {
+                        next MODULE if $module eq 'perl';
+
+                        my $version = $req_all_hash->{$module};
+
+                        if ( Module::CoreList->is_core( $module, undef, $latest_perl_known_to_module_corelist ) ) {
+                            push @modules_core, [ lc($module), version->new( Module::CoreList->first_release( $module, $version ) ), $module, $version ];
+                        }
+                        else {
+                            push @modules_not_core, [ lc($module), $module, $version ];
+                        }
+                    }
+
+                    for my $module_ref ( sort { $a->[1] <=> $b->[1] || $a->[0] cmp $b->[0] } @modules_core ) {
+                        my $name = $module_ref->[2];
+                        if ( $module_ref->[3] ne '0' ) {
+                            $name .= " $module_ref->[3]";
+                        }
+
+                        $self->log( "Dependency $name added by tests (core since " . $module_ref->[1]->normal . ')' );
+                    }
+
+                    for my $module_ref ( sort { $a->[0] cmp $b->[0] } @modules_not_core ) {
+                        my $name = $module_ref->[1];
+                        if ( $module_ref->[2] ne '0' ) {
+                            $name .= " $module_ref->[2]";
+                        }
+
+                        $self->log( colored( "Dependency $name added by tests !!! NOT A CORE DEPENDENCY !!!", 'red' ) );
+                    }
+                },
             },
         ],
     );
