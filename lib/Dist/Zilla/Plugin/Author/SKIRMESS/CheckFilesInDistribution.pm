@@ -100,7 +100,10 @@ sub _is_file_allowed {
     if ( $dirs[0] eq 'xt' ) {
         return if @dirs < 3;
 
-        return 1 if $dirs[1] eq 'smoke' and $dirs[-1] =~ m{ .+ [.] t $ }xsm;
+        return 1 if $dirs[1] eq 'smoke' && $dirs[-1] =~ m{ .+ [.] t $ }xsm;
+
+        # xt/smoke/lib/**/*.pm
+        return 1 if @dirs > 3 && $dirs[1] eq 'smoke' && $dirs[2] eq 'lib' && $dirs[-1] =~ m{ .* [.] pm $ }xsm;
 
         return;
     }
