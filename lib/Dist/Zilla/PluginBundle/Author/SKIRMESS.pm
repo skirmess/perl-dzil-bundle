@@ -425,6 +425,80 @@ sub configure {
         ],
     );
 
+    # Check if xt/smoke tests add a non-core dependency
+    # use Perl::PrereqScanner ();
+    # $self->add_plugins(
+    #     [
+    #         'Code::AfterBuild',
+    #         'XTSmokeTestDependenciesAreInCore',
+    #         {
+    #             after_build => sub {
+    #                 my ( $self, $payload ) = @_;
+
+    #                 my $prereqs = $self->zilla->prereqs->cpan_meta_prereqs;
+
+    #                 my $req      = $prereqs->requirements_for( 'runtime', 'requires' )->clone->add_requirements( $prereqs->requirements_for( 'configure', 'requires' ) )->add_requirements( $prereqs->requirements_for( 'test', 'requires' ) );
+    #                 my $req_hash = $req->as_string_hash;
+
+    #                 for my $file ( grep { path('xt/smoke')->subsumes( $_->name ) } @{ $self->zilla->files } ) {
+    #                     my $req_this_smoke_hash = Perl::PrereqScanner->new->scan_string( $file->content )->add_requirements($req)->as_string_hash;
+
+    #                     for my $module ( keys %{$req_hash} ) {
+    #                         $self->log_fatal("internal error: module = $module") if !exists $req_this_smoke_hash->{$module};
+
+    #                         if ( $req_hash->{$module} eq $req_this_smoke_hash->{$module} ) {
+    #                             delete $req_this_smoke_hash->{$module};
+    #                         }
+    #                     }
+
+    #                     if ( scalar keys %{$req_this_smoke_hash} == 0 ) {
+    #                         $self->log( colored( '[' . $file->name . '] No additional dependencies', 'red' ) );
+    #                     }
+    #                     else {
+    #                         my @modules_core;
+    #                         my @modules_not_core;
+    #                       MODULE:
+    #                         for my $module ( sort keys %{$req_this_smoke_hash} ) {
+    #                             next MODULE if $module eq 'perl';
+
+    #                             my $version = $req_this_smoke_hash->{$module};
+
+    #                             if ( Module::CoreList->is_core( $module, undef, $latest_perl_known_to_module_corelist ) ) {
+    #                                 push @modules_core, [ lc($module), version->new( Module::CoreList->first_release( $module, $version ) ), $module, $version ];
+    #                             }
+    #                             else {
+    #                                 push @modules_not_core, [ lc($module), $module, $version ];
+    #                             }
+    #                         }
+
+    #                         for my $module_ref ( sort { $a->[1] <=> $b->[1] || $a->[0] cmp $b->[0] } @modules_core ) {
+    #                             my $name = $module_ref->[2];
+    #                             if ( $module_ref->[3] ne '0' ) {
+    #                                 $name .= " $module_ref->[3]";
+    #                             }
+
+    #                             $self->log( '[' . $file->name . "] Dependency $name (core since " . $module_ref->[1]->normal . ')' );
+    #                         }
+
+    #                         for my $module_ref ( sort { $a->[0] cmp $b->[0] } @modules_not_core ) {
+    #                             my $name = $module_ref->[1];
+    #                             if ( $module_ref->[2] ne '0' ) {
+    #                                 $name .= " $module_ref->[2]";
+    #                             }
+
+    #                             $self->log( colored( '[' . $file->name . "] Dependency $name (not in core)", 'yellow' ) );
+    #                         }
+
+    #                         if ( !@modules_not_core ) {
+    #                             $self->log( colored( '[' . $file->name . '] No additional dependency!', 'red' ) );
+    #                         }
+    #                     }
+    #                 }
+    #             },
+    #         },
+    #     ],
+    # );
+
     # Automatically convert POD to a README in any format for Dist::Zilla
     $self->add_plugins(
         [
