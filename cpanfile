@@ -18,7 +18,6 @@ requires 'Dist::Zilla::Plugin::CheckSelfDependency';
 requires 'Dist::Zilla::Plugin::CheckStrictVersion';
 requires 'Dist::Zilla::Plugin::Code::AfterBuild';
 requires 'Dist::Zilla::Plugin::Code::FileMunger', '0.007';
-requires 'Dist::Zilla::Plugin::Code::MetaProvider';
 requires 'Dist::Zilla::Plugin::Code::PrereqSource';
 requires 'Dist::Zilla::Plugin::ConfirmRelease';
 requires 'Dist::Zilla::Plugin::ExecDir';

@@ -537,10 +537,12 @@ sub configure {
                             delete $meta_yaml->[0]->{x_generated_by_perl};
                             delete $meta_yaml->[0]->{x_serialization_backend};
 
-                            # force this to be numeric - for whatever reason YAML::Tiny
-                            # converts it to a string otherwise
-                            if ( exists $meta_yaml->[0]->{dynamic_config} ) {
-                                $meta_yaml->[0]->{dynamic_config} = $meta_yaml->[0]->{dynamic_config} + 0;
+                            # Set dynamic_config to true in META.* files if we have smoker prereqs
+                            if ( keys %{$smoker_requires} ) {
+                                $meta_yaml->[0]->{dynamic_config} = 1;
+                            }
+                            else {
+                                $self->log_fatal(q{dynamic_config is true but we don't have any smoker prereqs}) if $meta_yaml->[0]->{dynamic_config};
                             }
 
                             my $content = $meta_yaml->write_string;
@@ -581,6 +583,14 @@ sub configure {
                             $meta_json->{generated_by} =~ s{ \s+ version \s+ .+? ( , | $ ) }{$1}xsmg;
                             delete $meta_json->{x_generated_by_perl};
                             delete $meta_json->{x_serialization_backend};
+
+                            # Set dynamic_config to true in META.* files if we have smoker prereqs
+                            if ( keys %{$smoker_requires} ) {
+                                $meta_json->{dynamic_config} = 1;
+                            }
+                            else {
+                                $self->log_fatal(q{dynamic_config is true but we don't have any smoker prereqs}) if $meta_json->{dynamic_config};
+                            }
 
                             my $content = $json->encode($meta_json) . "\n";
                             return $content;
@@ -810,23 +820,6 @@ sub configure {
 
     # Install a directory's contents as "ShareDir" content
     $self->add_plugins('ShareDir');
-
-    # Set dynamic_config to true in META.* files if we have smoker prereqs
-    $self->add_plugins(
-        [
-            'Code::MetaProvider',
-            {
-                metadata => sub {
-                    my ($self) = @_;
-                    if ( keys %{$smoker_requires} ) {
-                        return +{ dynamic_config => 1 };
-                    }
-
-                    return +{};
-                },
-            },
-        ],
-    );
 
     # Build a Makefile.PL that uses ExtUtils::MakeMaker
     # (this is also the test runner)
