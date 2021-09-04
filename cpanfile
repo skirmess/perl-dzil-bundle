@@ -34,7 +34,7 @@ requires 'Dist::Zilla::Plugin::Git::RequireUnixEOL';
 requires 'Dist::Zilla::Plugin::Git::Tag';
 requires 'Dist::Zilla::Plugin::GithubMeta';
 requires 'Dist::Zilla::Plugin::License';
-requires 'Dist::Zilla::Plugin::MakeMaker::Awesome';
+requires 'Dist::Zilla::Plugin::MakeMaker::Awesome', '0.49';
 requires 'Dist::Zilla::Plugin::Manifest';
 requires 'Dist::Zilla::Plugin::ManifestSkip';
 requires 'Dist::Zilla::Plugin::MetaJSON';

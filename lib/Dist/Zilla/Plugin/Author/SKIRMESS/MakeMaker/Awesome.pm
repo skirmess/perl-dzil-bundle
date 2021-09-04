@@ -8,7 +8,7 @@ our $VERSION = '1.000';
 
 use Moose;
 
-extends 'Dist::Zilla::Plugin::MakeMaker::Awesome';
+extends 'Dist::Zilla::Plugin::MakeMaker::Awesome' => { -version => 0.49 };
 
 use MooseX::Types::Moose qw(CodeRef);
 
@@ -36,14 +36,15 @@ use Term::ANSIColor qw(colored);
 
 use namespace::autoclean;
 
-override build => sub {
-    my ($self) = @_;
+around build => sub {
+    my $orig = shift;
+    my $self = shift;
 
     # Needed to run tests under xt/smoke with 'dzil test'
     $self->log('Setting EXTENDED_TESTING=1');
     local $ENV{EXTENDED_TESTING} = 1;
 
-    super();
+    return $self->orig(@_);
 };
 
 override _build_MakeFile_PL_template => sub {
@@ -114,27 +115,9 @@ override _dump_as => sub {
     return $dumped;
 };
 
-override fill_in_string => sub {
-    my ( $self, $content, $data_ref ) = @_;
-
-    if ( $self->_has_extended_tests ) {
-        $data_ref->{add_smoker_test_requirements} = <<'EOF';
-if ( $ENV{AUTOMATED_TESTING} || $ENV{EXTENDED_TESTING} ) {
-    $WriteMakefileArgs{test}{TESTS} .= ' xt/smoke/*.t';
-EOF
-
-        if ( $self->_has_extended_requirements ) {
-            $data_ref->{add_smoker_test_requirements} .= "    _add_smoker_test_requirements();\n";
-        }
-
-        $data_ref->{add_smoker_test_requirements} .= "}\n";
-    }
-
-    return $self->SUPER::fill_in_string( $content, $data_ref );
-};
-
-override setup_installer => sub {
-    my ($self) = @_;
+around setup_installer => sub {
+    my $orig = shift;
+    my $self = shift;
 
     my $meta_req   = CPAN::Meta::Requirements->new;
     my $meta_seen  = 0;
@@ -233,7 +216,7 @@ EOF
         }
     }
 
-    super();
+    $self->$orig(@_);
 
     my $source_string = $makefile_pl->content;
     my $dest_string;
@@ -265,14 +248,37 @@ EOF
     return;
 };
 
-override test => sub {
-    my ($self) = @_;
+around template_arguments => sub {
+    my $orig = shift;
+    my $self = shift;
+
+    my $template_arguments = $self->$orig(@_);
+
+    if ( $self->_has_extended_tests ) {
+        $template_arguments->{add_smoker_test_requirements} = <<'EOF';
+if ( $ENV{AUTOMATED_TESTING} || $ENV{EXTENDED_TESTING} ) {
+    $WriteMakefileArgs{test}{TESTS} .= ' xt/smoke/*.t';
+EOF
+
+        if ( $self->_has_extended_requirements ) {
+            $template_arguments->{add_smoker_test_requirements} .= "    _add_smoker_test_requirements();\n";
+        }
+
+        $template_arguments->{add_smoker_test_requirements} .= "}\n";
+    }
+
+    return $template_arguments;
+};
+
+around test => sub {
+    my $orig = shift;
+    my $self = shift;
 
     # Needed to run tests under xt/smoke with 'dzil test'
     $self->log('Setting EXTENDED_TESTING=1');
     local $ENV{EXTENDED_TESTING} = 1;
 
-    super();
+    return $self->orig(@_);
 };
 
 __PACKAGE__->meta->make_immutable;
