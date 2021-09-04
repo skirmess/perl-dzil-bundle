@@ -543,6 +543,9 @@ sub configure {
                             }
                             else {
                                 $self->log_fatal(q{dynamic_config is true but we don't have any smoker prereqs}) if $meta_yaml->[0]->{dynamic_config};
+
+                                # convert it to numeric from string
+                                $meta_yaml->[0]->{dynamic_config} = 0;
                             }
 
                             my $content = $meta_yaml->write_string;
