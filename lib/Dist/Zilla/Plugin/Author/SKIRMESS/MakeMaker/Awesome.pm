@@ -44,7 +44,7 @@ around build => sub {
     $self->log('Setting EXTENDED_TESTING=1');
     local $ENV{EXTENDED_TESTING} = 1;
 
-    return $self->orig(@_);
+    return $self->$orig(@_);
 };
 
 override _build_MakeFile_PL_template => sub {
@@ -278,7 +278,7 @@ around test => sub {
     $self->log('Setting EXTENDED_TESTING=1');
     local $ENV{EXTENDED_TESTING} = 1;
 
-    return $self->orig(@_);
+    return $self->$orig(@_);
 };
 
 __PACKAGE__->meta->make_immutable;
