@@ -57,7 +57,6 @@ requires 'Dist::Zilla::Role::BeforeRelease';
 requires 'Dist::Zilla::Role::FileFinderUser';
 requires 'Dist::Zilla::Role::FileGatherer';
 requires 'Dist::Zilla::Role::FileMunger';
-requires 'Dist::Zilla::Role::PluginBundle::Config::Slicer';
 requires 'Dist::Zilla::Role::PluginBundle::Easy';
 requires 'Dist::Zilla::Role::PrereqSource';
 requires 'Dist::Zilla::Role::TestRunner';

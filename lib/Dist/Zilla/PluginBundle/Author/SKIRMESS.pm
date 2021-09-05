@@ -8,10 +8,7 @@ our $VERSION = '1.000';
 
 use Moose 0.99;
 
-with qw(
-  Dist::Zilla::Role::PluginBundle::Easy
-  Dist::Zilla::Role::PluginBundle::Config::Slicer
-);
+with 'Dist::Zilla::Role::PluginBundle::Easy';
 
 use Carp qw(confess);
 use CPAN::Meta::Prereqs       ();
