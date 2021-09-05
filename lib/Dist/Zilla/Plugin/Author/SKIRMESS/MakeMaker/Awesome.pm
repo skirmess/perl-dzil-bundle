@@ -40,7 +40,7 @@ around build => sub {
     my $orig = shift;
     my $self = shift;
 
-    # Needed to run tests under xt/smoke with 'dzil test'
+    # Needed to run extended tests under xt with 'dzil test'
     $self->log('Setting EXTENDED_TESTING=1');
     local $ENV{EXTENDED_TESTING} = 1;
 
@@ -75,7 +75,7 @@ my {{ $WriteMakefileArgs }}
 }}
 my {{ $fallback_prereqs }}
 
-{{ $add_smoker_test_requirements }}
+{{ $add_extended_test_requirements }}
 
 if ( !eval { ExtUtils::MakeMaker->VERSION('6.63_03') } ) {
     delete $WriteMakefileArgs{TEST_REQUIRES};
@@ -119,9 +119,9 @@ around setup_installer => sub {
     my $orig = shift;
     my $self = shift;
 
-    my $meta_req   = CPAN::Meta::Requirements->new;
-    my $meta_seen  = 0;
-    my $smoke_seen = 0;
+    my $meta_req      = CPAN::Meta::Requirements->new;
+    my $meta_seen     = 0;
+    my $extended_seen = 0;
     my $makefile_pl;
 
   FILE:
@@ -152,8 +152,8 @@ around setup_installer => sub {
             next FILE;
         }
 
-        if ( $file->name =~ m{ ^ xt/smoke/ }xsm ) {
-            $smoke_seen++;
+        if ( $file->name =~ m{ ^ xt / [^/]+ [.] t $ }xsm ) {
+            $extended_seen++;
 
             next FILE;
         }
@@ -164,8 +164,8 @@ around setup_installer => sub {
 
     my %extended_prereqs = %{ $self->extended_prereqs->() };
 
-    if ( !$smoke_seen ) {
-        $self->log_fatal('No xt/smoke tests but extended prereqs...?') if keys %extended_prereqs;
+    if ( !$extended_seen ) {
+        $self->log_fatal('No xt/*.t tests but extended prereqs...?') if keys %extended_prereqs;
     }
     else {
         $self->_has_extended_tests(1);
@@ -174,11 +174,11 @@ around setup_installer => sub {
             my $extended_req = CPAN::Meta::Requirements->from_string_hash( \%extended_prereqs );
 
             # Merge the requirements from META.json into the requirements
-            # from the smoke tests
+            # from the extended tests
             $extended_req->add_requirements($meta_req);
 
-            # Remove the requirements that are the same from the smoke_req - the
-            # other are guaranteed to be bigger or additional ones
+            # Remove the requirements that are the same from the extended_req
+            # the other are guaranteed to be bigger or additional ones
             my $meta_hash     = $meta_req->as_string_hash;
             my $extended_hash = $extended_req->as_string_hash;
 
@@ -204,7 +204,7 @@ sub test_requires {
     return;
 }
 
-sub _add_smoker_test_requirements {
+sub _add_extended_test_requirements {
 EOF
 
                 for my $module ( sort keys %{$extended_hash} ) {
@@ -255,16 +255,16 @@ around template_arguments => sub {
     my $template_arguments = $self->$orig(@_);
 
     if ( $self->_has_extended_tests ) {
-        $template_arguments->{add_smoker_test_requirements} = <<'EOF';
+        $template_arguments->{add_extended_test_requirements} = <<'EOF';
 if ( $ENV{AUTOMATED_TESTING} || $ENV{EXTENDED_TESTING} ) {
-    $WriteMakefileArgs{test}{TESTS} .= ' xt/smoke/*.t';
+    $WriteMakefileArgs{test}{TESTS} .= ' xt/*.t';
 EOF
 
         if ( $self->_has_extended_requirements ) {
-            $template_arguments->{add_smoker_test_requirements} .= "    _add_smoker_test_requirements();\n";
+            $template_arguments->{add_extended_test_requirements} .= "    _add_extended_test_requirements();\n";
         }
 
-        $template_arguments->{add_smoker_test_requirements} .= "}\n";
+        $template_arguments->{add_extended_test_requirements} .= "}\n";
     }
 
     return $template_arguments;
@@ -274,7 +274,7 @@ around test => sub {
     my $orig = shift;
     my $self = shift;
 
-    # Needed to run tests under xt/smoke with 'dzil test'
+    # Needed to run extended tests under xt with 'dzil test'
     $self->log('Setting EXTENDED_TESTING=1');
     local $ENV{EXTENDED_TESTING} = 1;
 

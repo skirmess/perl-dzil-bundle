@@ -144,7 +144,7 @@ sub _xt_tests {
     my $wd = File::pushd::pushd($project_root);    ## no critic (Variables::ProhibitUnusedVarsStricter)
 
     # Find all the tests we have to run
-    my %xt_child = map { $_ => $_ } grep { -d || m{ [.]t $ }xsm } path('xt')->children;
+    my %xt_child = map { $_ => $_ } grep { m{ [.]t $ }xsm } path('xt')->children;
 
     if ( !exists $ENV{AUTHOR_TESTING} && !exists $ENV{DZIL_RELEASING} ) {
         delete $xt_child{'xt/author'};
@@ -155,7 +155,11 @@ sub _xt_tests {
     }
 
     if ( !exists $ENV{EXTENDED_TESTING} ) {
-        delete $xt_child{'xt/smoke'};
+      FILE:
+        for my $file ( keys %xt_child ) {
+            next FILE if $file !~ m{ ^ [^/]+ [.] t $ }xsm;
+            delete $xt_child{$file};
+        }
     }
 
   XT_CHILD:

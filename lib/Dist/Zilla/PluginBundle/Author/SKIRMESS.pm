@@ -103,7 +103,7 @@ sub configure {
                     'dist.ini',
                     @generated_files,
                 ],
-                exclude_match    => '^xt/(?!smoke/)',
+                exclude_match    => '^xt/(?!lib/).+/',
                 include_dotfiles => 1,
             },
         ],
@@ -162,16 +162,16 @@ sub configure {
     #   :InstallModules -> ^lib/.*\.(?:pm|pod)$
     #   :ExecFiles      -> everything under bin through ExecDir
     #   :TestFiles      -> ^t/
-    #   :ExtraTestFiles -> ^xt/ (only smoke tests in our case)
+    #   :ExtraTestFiles -> ^xt/ (only extended tests in our case)
     $self->add_plugins('AutoPrereqs');
 
     # Detects the minimum version of Perl required for your dist
     $self->add_plugins('Author::SKIRMESS::MinimumPerl');
 
-    # Smoker prereqs (xt/smoke) are added as develop dependencies by
+    # Smoker prereqs (xt/*.t) are added as develop dependencies by
     # AutoPrereqs above - save them to a variable because we need them for
     # the Makefile.PL.
-    my $smoker_requires;
+    my $extended_requires;
     $self->add_plugins(
         [
             'Code::PrereqSource',
@@ -186,7 +186,7 @@ sub configure {
                     $self->log_fatal(q{We can only handle 'requires' in 'develop' prereqs}) if @types > 1 || $types[0] ne 'requires';
 
                     my $cpan_meta_requirements = $self->zilla->prereqs->cpan_meta_prereqs->requirements_for( 'develop', 'requires' );
-                    $smoker_requires = $cpan_meta_requirements->as_string_hash;
+                    $extended_requires = $cpan_meta_requirements->as_string_hash;
 
                     return;
                 },
@@ -194,7 +194,7 @@ sub configure {
         ],
     );
 
-    # :ExtraTestFiles contains only the xt/smoke tests, or is empty, because
+    # :ExtraTestFiles contains only the extended tests, or is empty, because
     # we don't add xt test files to the distribution, that's why we have to
     # create a new ExtraTestFiles plugin
     $self->add_plugins(
@@ -217,7 +217,7 @@ sub configure {
     #   :InstallModules -> ^lib/.*\.(?:pm|pod)$
     #   :ExecFiles      -> everything under bin through ExecDir
     #   :TestFiles      -> ^t/
-    #   :ExtraTestFiles -> ^xt/ (only smoke tests in our case)
+    #   :ExtraTestFiles -> ^xt/ (only extended tests in our case)
     #   @Author::SKIRMESS/ExtraTestFiles
     #                   -> everything under xt in the project (not the dist)
     $self->add_plugins(
@@ -422,80 +422,6 @@ sub configure {
         ],
     );
 
-    # Check if xt/smoke tests add a non-core dependency
-    # use Perl::PrereqScanner ();
-    # $self->add_plugins(
-    #     [
-    #         'Code::AfterBuild',
-    #         'XTSmokeTestDependenciesAreInCore',
-    #         {
-    #             after_build => sub {
-    #                 my ( $self, $payload ) = @_;
-
-    #                 my $prereqs = $self->zilla->prereqs->cpan_meta_prereqs;
-
-    #                 my $req      = $prereqs->requirements_for( 'runtime', 'requires' )->clone->add_requirements( $prereqs->requirements_for( 'configure', 'requires' ) )->add_requirements( $prereqs->requirements_for( 'test', 'requires' ) );
-    #                 my $req_hash = $req->as_string_hash;
-
-    #                 for my $file ( grep { path('xt/smoke')->subsumes( $_->name ) } @{ $self->zilla->files } ) {
-    #                     my $req_this_smoke_hash = Perl::PrereqScanner->new->scan_string( $file->content )->add_requirements($req)->as_string_hash;
-
-    #                     for my $module ( keys %{$req_hash} ) {
-    #                         $self->log_fatal("internal error: module = $module") if !exists $req_this_smoke_hash->{$module};
-
-    #                         if ( $req_hash->{$module} eq $req_this_smoke_hash->{$module} ) {
-    #                             delete $req_this_smoke_hash->{$module};
-    #                         }
-    #                     }
-
-    #                     if ( scalar keys %{$req_this_smoke_hash} == 0 ) {
-    #                         $self->log( colored( '[' . $file->name . '] No additional dependencies', 'red' ) );
-    #                     }
-    #                     else {
-    #                         my @modules_core;
-    #                         my @modules_not_core;
-    #                       MODULE:
-    #                         for my $module ( sort keys %{$req_this_smoke_hash} ) {
-    #                             next MODULE if $module eq 'perl';
-
-    #                             my $version = $req_this_smoke_hash->{$module};
-
-    #                             if ( Module::CoreList->is_core( $module, undef, $latest_perl_known_to_module_corelist ) ) {
-    #                                 push @modules_core, [ lc($module), version->new( Module::CoreList->first_release( $module, $version ) ), $module, $version ];
-    #                             }
-    #                             else {
-    #                                 push @modules_not_core, [ lc($module), $module, $version ];
-    #                             }
-    #                         }
-
-    #                         for my $module_ref ( sort { $a->[1] <=> $b->[1] || $a->[0] cmp $b->[0] } @modules_core ) {
-    #                             my $name = $module_ref->[2];
-    #                             if ( $module_ref->[3] ne '0' ) {
-    #                                 $name .= " $module_ref->[3]";
-    #                             }
-
-    #                             $self->log( '[' . $file->name . "] Dependency $name (core since " . $module_ref->[1]->normal . ')' );
-    #                         }
-
-    #                         for my $module_ref ( sort { $a->[0] cmp $b->[0] } @modules_not_core ) {
-    #                             my $name = $module_ref->[1];
-    #                             if ( $module_ref->[2] ne '0' ) {
-    #                                 $name .= " $module_ref->[2]";
-    #                             }
-
-    #                             $self->log( colored( '[' . $file->name . "] Dependency $name (not in core)", 'yellow' ) );
-    #                         }
-
-    #                         if ( !@modules_not_core ) {
-    #                             $self->log( colored( '[' . $file->name . '] No additional dependency!', 'red' ) );
-    #                         }
-    #                     }
-    #                 }
-    #             },
-    #         },
-    #     ],
-    # );
-
     # Automatically convert POD to a README in any format for Dist::Zilla
     $self->add_plugins(
         [
@@ -534,12 +460,12 @@ sub configure {
                             delete $meta_yaml->[0]->{x_generated_by_perl};
                             delete $meta_yaml->[0]->{x_serialization_backend};
 
-                            # Set dynamic_config to true in META.* files if we have smoker prereqs
-                            if ( keys %{$smoker_requires} ) {
+                            # Set dynamic_config to true in META.* files if we have extended prereqs
+                            if ( keys %{$extended_requires} ) {
                                 $meta_yaml->[0]->{dynamic_config} = 1;
                             }
                             else {
-                                $self->log_fatal(q{dynamic_config is true but we don't have any smoker prereqs}) if $meta_yaml->[0]->{dynamic_config};
+                                $self->log_fatal(q{dynamic_config is true but we don't have any extended prereqs}) if $meta_yaml->[0]->{dynamic_config};
 
                                 # convert it to numeric from string
                                 $meta_yaml->[0]->{dynamic_config} = 0;
@@ -584,12 +510,12 @@ sub configure {
                             delete $meta_json->{x_generated_by_perl};
                             delete $meta_json->{x_serialization_backend};
 
-                            # Set dynamic_config to true in META.* files if we have smoker prereqs
-                            if ( keys %{$smoker_requires} ) {
+                            # Set dynamic_config to true in META.* files if we have extended prereqs
+                            if ( keys %{$extended_requires} ) {
                                 $meta_json->{dynamic_config} = 1;
                             }
                             else {
-                                $self->log_fatal(q{dynamic_config is true but we don't have any smoker prereqs}) if $meta_json->{dynamic_config};
+                                $self->log_fatal(q{dynamic_config is true but we don't have any extended prereqs}) if $meta_json->{dynamic_config};
                             }
 
                             my $content = $json->encode($meta_json) . "\n";
@@ -615,7 +541,7 @@ sub configure {
 
                     # Merge prereqs with removed develop prereqs. These will
                     # be the runtime, test and develop entries of the
-                    # cpanfile. The dependencies for xt/smoker, xt/author,
+                    # cpanfile. The dependencies for xt/*.t, xt/author,
                     # and xt/release are under develop.
                     my $cpanfile_project_prereqs = $self->zilla->prereqs->cpan_meta_prereqs->clone->with_merged_prereqs(
                         CPAN::Meta::Prereqs->new(
@@ -828,7 +754,7 @@ sub configure {
             'Author::SKIRMESS::MakeMaker::Awesome',
             {
                 test_file        => 't/*.t',
-                extended_prereqs => sub { return $smoker_requires },
+                extended_prereqs => sub { return $extended_requires },
             },
         ],
     );
