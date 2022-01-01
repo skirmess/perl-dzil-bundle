@@ -144,43 +144,43 @@ sub _xt_tests {
     my $wd = File::pushd::pushd($project_root);    ## no critic (Variables::ProhibitUnusedVarsStricter)
 
     # Find all the tests we have to run
-    my %xt_child = map { $_ => $_ } grep { m{ [.]t $ }xsm } path('xt')->children;
+    my @tests;
+    my $it = path('xt')->iterator( { recurse => 1 } );
 
-    if ( !exists $ENV{AUTHOR_TESTING} && !exists $ENV{DZIL_RELEASING} ) {
-        delete $xt_child{'xt/author'};
-    }
+  FILE:
+    while ( defined( my $file = $it->() ) ) {
 
-    if ( !exists $ENV{RELEASE_TESTING} && !exists $ENV{DZIL_RELEASING} ) {
-        delete $xt_child{'xt/release'};
-    }
+        # not a file
+        next FILE if !-f $file->stringify;
 
-    if ( !exists $ENV{EXTENDED_TESTING} ) {
-      FILE:
-        for my $file ( keys %xt_child ) {
-            next FILE if $file !~ m{ ^ [^/]+ [.] t $ }xsm;
-            delete $xt_child{$file};
+        # not a .t file
+        next FILE if $file->basename !~ m{ [.] t $ }xsm;
+
+        # extended test, e.g. xt/test-this.t
+        next FILE if path('xt')->child( $file->basename )->stringify eq $file->stringify;
+
+        # author test
+        if ( path('xt')->child('author')->child( $file->basename )->stringify eq $file->stringify ) {
+            if ( exists $ENV{AUTHOR_TESTING} || exists $ENV{DZIL_RELEASING} ) {
+                push @tests, $file->stringify;
+            }
+
+            next FILE;
         }
-    }
 
-  XT_CHILD:
-    for my $xt_child ( values %xt_child ) {
-        next XT_CHILD if -f $xt_child;
+        # release test
+        if ( path('xt')->child('release')->child( $file->basename )->stringify eq $file->stringify ) {
+            if ( exists $ENV{RELEASE_TESTING} || exists $ENV{DZIL_RELEASING} ) {
+                push @tests, $file->stringify;
+            }
 
-        $self->log_fatal("File '$xt_child' in project xt is not a directory nor a regular file") if !-d $xt_child;
-
-        delete $xt_child{"$xt_child"};
-
-        my $it = $xt_child->iterator( { recurse => 1 } );
-      FILE:
-        while ( defined( my $file = $it->() ) ) {
-            next FILE if !-f $file;
-            next FILE if $file !~ m{ [.] t $ }xsm;
-
-            $xt_child{"$file"} = $file;
+            next FILE;
         }
+
+        $self->log_fatal("Unknown test file '$file'");
     }
 
-    my @tests = sort { lc $a cmp lc $b } keys %xt_child;
+    @tests = sort { lc $a cmp lc $b } @tests;
     return @tests;
 }
 
@@ -210,21 +210,44 @@ In your F<dist.ini>:
 
 =head1 DESCRIPTION
 
-This plugin is used to run xt tests from your project against your distribution and against your project. This is useful if you don't want to include your xt tests in your distribution. If you include your xt tests with your distribution, use L<RunExtraTests|Dist::Zilla::Plugin::RunExtraTests> instead. The plugin was created because the existing test plugins always run the tests from the build against the build. This makes it impossible to check files that are part of your project but not included in the distribution which can be useful for some tests. Additionally it forces you to include your author tests in the distribution, which, in my opinion, is questionable because the distribution is no longer a working dzil project anyway.
+This plugin is used to run xt tests from your project against your
+distribution and against your project. This is useful if you do not want to
+include your xt tests in your distribution. If you include your xt tests with
+your distribution, use L<RunExtraTests|Dist::Zilla::Plugin::RunExtraTests>
+instead.
 
-Runs xt tests when the test phase is run (e.g. dzil test, dzil release etc). xt/release, xt/author, and xt/smoke will be tested based on the values of the appropriate environment variables (RELEASE_TESTING, AUTHOR_TESTING, and EXTENDED_TESTING), which are set by dzil test. Additionally, all other xt files and directories will always be run.
+The plugin was created because the existing test plugins always run the tests
+from the build against the build. This makes it impossible to check files
+that are part of your project but not included in the distribution which can
+be useful for some tests. Additionally it forces you to include your author
+tests in the distribution, which, in my opinion, is questionable because the
+distribution is no longer a working dzil project anyway.
 
-All xt tests are run twice, once against the built distribution and again against the project. The environment variable C<BUILD_TESTING> is set and C<PROJECT_TESTING> is unset if the xt tests are run against the distribution. When the xt tests are run against the project C<PROJECT_TESTING> is set and C<BUILD_TESTING> is unset. If both variables are unset the test is most likely run directly under prove.
+Runs xt tests when the test phase is run (e.g. dzil test, dzil release etc).
+Tests from C<xt/release> and C<xt/author> will be tested based on the values
+of the appropriate environment variables C<RELEASE_TESTING> and
+C<AUTHOR_TESTING> which are set by dzil test. Only tests directly under
+C<xt/author> and C<xt/release> are run, all other files are ignored.
 
-C<Author::SKIRMESS::RunExtraTests::FromProject> must be listed after one of the normal test-running plugins (e.g. MakeMaker).
+All xt tests are run twice, once against the built distribution and again
+against the project. The environment variable C<BUILD_TESTING> is set and
+C<PROJECT_TESTING> is unset if the xt tests are run against the distribution.
+When the xt tests are run against the project C<PROJECT_TESTING> is set and
+C<BUILD_TESTING> is unset. If both variables are unset the test is most likely
+run directly under prove.
+
+C<Author::SKIRMESS::RunExtraTests::FromProject> must be listed after one of
+the normal test-running plugins (e.g. MakeMaker).
 
 =head2 skip_build
 
-The option C<skip_build> is used to specify xt tests to skip while testing the distribution. The option can be specified multiple times.
+The option C<skip_build> is used to specify xt tests to skip while testing
+the distribution. The option can be specified multiple times.
 
 =head2 skip_project
 
-The option C<skip_project> is used to specify xt tests to skip while testing the project. The option can be specified multiple times.
+The option C<skip_project> is used to specify xt tests to skip while testing
+the project. The option can be specified multiple times.
 
 =head1 SUPPORT
 
