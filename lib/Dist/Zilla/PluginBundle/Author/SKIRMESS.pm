@@ -79,7 +79,7 @@ sub configure {
     # Without this, Local::Test::TempDir creates the tmp directory
     # inside the release during a 'dzil release' which breakes the
     # release
-    $ENV{LOCAL_TEST_TEMPDIR_BASEDIR} = path(q{.})->absolute->stringify;
+    $ENV{LOCAL_TEST_TEMPDIR_BASEDIR} = path(q{.})->absolute->stringify;    ## no critic (Variables::RequireLocalizedPunctuationVars)
 
     my $self_build = $self->_self_build;
 
