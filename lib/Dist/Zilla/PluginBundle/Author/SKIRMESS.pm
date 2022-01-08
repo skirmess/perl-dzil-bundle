@@ -76,6 +76,11 @@ has set_script_shebang => (
 sub configure {
     my ($self) = @_;
 
+    # Without this, Local::Test::TempDir creates the tmp directory
+    # inside the release during a 'dzil release' which breakes the
+    # release
+    $ENV{LOCAL_TEST_TEMPDIR_BASEDIR} = path(q{.})->absolute->stringify;
+
     my $self_build = $self->_self_build;
 
     my @generated_files = qw(
