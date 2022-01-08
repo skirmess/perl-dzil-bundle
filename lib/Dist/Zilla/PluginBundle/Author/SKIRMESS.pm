@@ -826,9 +826,6 @@ sub configure {
     # Check that you're on the correct branch before release
     $self->add_plugins('Git::CheckFor::CorrectBranch');
 
-    # Check your repo for merge-conflicted files
-    $self->add_plugins('Git::CheckFor::MergeConflicts');
-
     # Ensure META includes resources
     $self->add_plugins('CheckMetaResources');
 
