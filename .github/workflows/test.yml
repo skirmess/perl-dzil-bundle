@@ -64,13 +64,6 @@ jobs:
         run: ${{ steps.perl.outputs.bin }} ${{ steps.installsitebin.outputs.path }}/cpanm --verbose --installdeps --notest --with-develop .
         working-directory: ${{ github.event.repository.name }}
 
-      - name: cpanm --notest App::ReportPrereqs
-        run: ${{ steps.perl.outputs.bin }} ${{ steps.installsitebin.outputs.path }}/cpanm --verbose --notest App::ReportPrereqs
-
-      - name: report-prereqs
-        run: ${{ steps.perl.outputs.bin }} ${{ steps.installsitebin.outputs.path }}/report-prereqs --with-develop
-        working-directory: ${{ github.event.repository.name }}
-
       - run: ${{ steps.installsitebin.outputs.path }}/prove -lr t
         working-directory: ${{ github.event.repository.name }}
         env:
@@ -80,6 +73,15 @@ jobs:
         working-directory: ${{ github.event.repository.name }}
         env:
           PERL_USE_UNSAFE_INC: 0
+
+      - name: cpanm --notest App::ReportPrereqs
+        run: ${{ steps.perl.outputs.bin }} ${{ steps.installsitebin.outputs.path }}/cpanm --verbose --notest App::ReportPrereqs
+        if: always()
+
+      - name: report-prereqs
+        run: ${{ steps.perl.outputs.bin }} ${{ steps.installsitebin.outputs.path }}/report-prereqs --with-develop
+        working-directory: ${{ github.event.repository.name }}
+        if: always()
 
       - uses: actions/upload-artifact@v2
         with:

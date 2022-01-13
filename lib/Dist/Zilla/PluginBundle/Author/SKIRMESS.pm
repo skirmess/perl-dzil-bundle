@@ -77,7 +77,7 @@ sub configure {
     my ($self) = @_;
 
     # Without this, Local::Test::TempDir creates the tmp directory
-    # inside the release during a 'dzil release' which breakes the
+    # inside the release during a 'dzil release' which breaks the
     # release
     $ENV{LOCAL_TEST_TEMPDIR_BASEDIR} = path(q{.})->absolute->stringify;    ## no critic (Variables::RequireLocalizedPunctuationVars)
 
@@ -1069,7 +1069,7 @@ Sven Kirmess <sven.kirmess@kzone.ch>
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is Copyright (c) 2017-2021 by Sven Kirmess.
+This software is Copyright (c) 2017-2022 by Sven Kirmess.
 
 This is free software, licensed under:
 
