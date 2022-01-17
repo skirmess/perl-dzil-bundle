@@ -313,6 +313,7 @@ sub configure {
 
     # Check for non-core dependencies
     my $latest_perl_known_to_module_corelist = ( sort map { version->new($_) } keys %Module::CoreList::released )[-1]->numify;
+    my $latest_perl_version_which_contains_all_required_core_modules;
     $self->add_plugins(
         [
             'Code::AfterBuild',
@@ -327,6 +328,7 @@ sub configure {
 
                     my @modules_core;
                     my @modules_not_core;
+                    my @perl_core_versions_used = ( version->parse('v5.6.0') );
                   MODULE:
                     for my $module ( sort keys %{$req_hash} ) {
                         next MODULE if $module eq 'perl';
@@ -348,6 +350,8 @@ sub configure {
                         }
 
                         $self->log( "Dependency $name (core since " . $module_ref->[1]->normal . ')' );
+
+                        push @perl_core_versions_used, version->parse( $module_ref->[1]->normal );
                     }
 
                     for my $module_ref ( sort { $a->[0] cmp $b->[0] } @modules_not_core ) {
@@ -358,6 +362,8 @@ sub configure {
 
                         $self->log( colored( "Dependency $name (not in core)", 'magenta' ) );
                     }
+
+                    $latest_perl_version_which_contains_all_required_core_modules = ( reverse sort @perl_core_versions_used )[0];
                 },
             },
         ],
@@ -411,7 +417,12 @@ sub configure {
                             $name .= " $module_ref->[3]";
                         }
 
-                        $self->log( "Dependency $name added by tests (core since " . $module_ref->[1]->normal . ')' );
+                        if ( version->parse( $module_ref->[1]->normal ) > $latest_perl_version_which_contains_all_required_core_modules ) {
+                            $self->log( colored( "Dependency $name added by tests (core since " . $module_ref->[1]->normal . ')', 'yellow' ) );
+                        }
+                        else {
+                            $self->log( "Dependency $name added by tests (core since " . $module_ref->[1]->normal . ')' );
+                        }
                     }
 
                     for my $module_ref ( sort { $a->[0] cmp $b->[0] } @modules_not_core ) {
