@@ -810,9 +810,11 @@ sub configure {
                     # skip the top level files like README or LICENSE
                     return if path($name)->basename eq $name;
 
+                    # skip everything under corpus
+                    return if path('corpus')->subsumes($name);
+
                     $self->log_fatal("Unknown file: $name")
-                      if $name !~ m{ \A .+ \Q.pm\E \z }xsm
-                      && $name !~ m{ \A .+ \Q.pl\E \z }xsm
+                      if $name !~ m{ \A .+ [.] (?: pl | pm ) \z }xsm
                       && $name !~ m{ \A x?t / .+ \Q.t\E \z }xsm;
 
                     # Files should either be OnDist or InMemory
