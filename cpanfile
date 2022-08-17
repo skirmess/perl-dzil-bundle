@@ -107,6 +107,7 @@ on test => sub {
 on develop => sub {
     requires 'CPAN';
     requires 'Dist::Zilla::Plugin::Bootstrap::lib';
+    requires 'List::Util', '1.33';
     requires 'Module::Info';
     requires 'Perl::Critic', '1.140';
     requires 'Perl::Critic::Policy::Bangs::ProhibitBitwiseOperators', '1.12';
