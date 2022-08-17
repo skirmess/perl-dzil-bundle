@@ -88,7 +88,7 @@ modules = Class::ISA {Found use of Class::ISA. This module is deprecated by the 
 #[Modules::ProhibitMultiplePackages]
 [Modules::RequireBarewordIncludes]
 [Modules::RequireEndWithOne]
-[Modules::RequireExplicitPackage]
+#[Modules::RequireExplicitPackage]
 [Modules::RequireFilenameMatchesPackage]
 [Modules::RequireNoMatchVarsWithUseEnglish]
 #[Modules::RequireVersionVar]
@@ -231,7 +231,7 @@ forbid_use_version = 1
 #[Lax::ProhibitStringyEval::ExceptForRequire]
 #[Lax::RequireConstantOnLeftSideOfEquality::ExceptEq]
 #[Lax::RequireEndWithTrueConst]
-#[Lax::RequireExplicitPackage::ExceptForPragmata]
+[Lax::RequireExplicitPackage::ExceptForPragmata]
 
 # ----------------------------------------------------------
 # Perl::Critic::Moose

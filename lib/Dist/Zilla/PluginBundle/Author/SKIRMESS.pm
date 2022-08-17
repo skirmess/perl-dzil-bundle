@@ -1,8 +1,24 @@
-package Dist::Zilla::PluginBundle::Author::SKIRMESS;
+# vim: ts=4 sts=4 sw=4 et: syntax=perl
+#
+# Copyright (c) 2017-2022 Sven Kirmess
+#
+# Permission to use, copy, modify, and distribute this software for any
+# purpose with or without fee is hereby granted, provided that the above
+# copyright notice and this permission notice appear in all copies.
+#
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+# ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+# ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+# OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 use 5.010;
 use strict;
 use warnings;
+
+package Dist::Zilla::PluginBundle::Author::SKIRMESS;
 
 our $VERSION = '1.000';
 
@@ -10,25 +26,26 @@ use Moose 0.99;
 
 with 'Dist::Zilla::Role::PluginBundle::Easy';
 
-use Carp qw(confess);
-use CPAN::Meta::Prereqs       ();
-use CPAN::Meta::Requirements  ();
-use Dist::Zilla::File::OnDisk ();
-use Dist::Zilla::Types 6.000 qw(Path);
+use Carp                                 qw(confess);
+use CPAN::Meta::Prereqs                  ();
+use CPAN::Meta::Requirements             ();
+use Dist::Zilla::File::OnDisk            ();
+use Dist::Zilla::Types 6.000             qw(Path);
 use Dist::Zilla::Util                    ();
 use Dist::Zilla::Util::BundleInfo        ();
 use Dist::Zilla::Util::ExpandINI::Reader ();
 use File::Temp                           ();
 use JSON::PP                             ();
-use List::Util qw(pairs);
-use Module::CoreList 2.77   ();
-use Module::CPANfile 1.1004 ();
-use Module::Metadata ();
-use Path::Tiny qw(path);
-use Perl::Critic::MergeProfile ();
-use Scalar::Util qw(blessed);
-use Term::ANSIColor qw(colored);
-use YAML::Tiny qw();
+use List::Util                           qw(pairs);
+use Local::Software::License::ISC        ();
+use Module::CoreList 2.77                ();
+use Module::CPANfile 1.1004              ();
+use Module::Metadata                     ();
+use Path::Tiny                           qw(path);
+use Perl::Critic::MergeProfile           ();
+use Scalar::Util                         qw(blessed);
+use Term::ANSIColor                      qw(colored);
+use YAML::Tiny                           qw();
 use version 0.77;
 
 use Config::MVP 2.200012 ();    # https://github.com/rjbs/Config-MVP/issues/13
@@ -751,6 +768,67 @@ sub configure {
         ],
     );
 
+    $self->add_plugins(
+        [
+            'Code::LicenseProvider',
+            {
+                provide_license => sub {
+                    my ( $self, $args ) = @_;
+
+                    my $zilla = $self->zilla;
+
+                    if ( $zilla->{_license_class} ne 'ISC' ) {
+                        $self->log( colored( 'License is not ISC', 'red' ) );
+                        return;
+                    }
+
+                    return Local::Software::License::ISC->new(
+                        {
+                            holder => $args->{copyright_holder},
+                            year   => $args->{copyright_year},
+                        },
+                    );
+                },
+            },
+        ],
+    );
+
+    # Add the license and vim line to all pm and pl files that are included
+    # in the distribution. Additionally, the perl files are reformatted to
+    # start with perl version, strict and warnings, then the package.
+    $self->add_plugins(
+        [
+            'Code::FileMunger',
+            'AddLicenseToDistFiles',
+            {
+                ':version' => '0.007',
+                munge_file => sub {
+                    my ( $self, $file ) = @_;
+
+                    my $name = $file->name;
+
+                    # skip the top level files like README or LICENSE
+                    return if path($name)->basename eq $name;
+
+                    $self->log_fatal("Unknown file: $name")
+                      if $name !~ m{ \A .+ \Q.pm\E \z }xsm
+                      && $name !~ m{ \A .+ \Q.pl\E \z }xsm
+                      && $name !~ m{ \A x?t / .+ \Q.t\E \z }xsm;
+
+                    # Files should either be OnDist or InMemory
+                    $self->log_fatal( q{'} . $file->name . q{' is not a 'Dist::Zilla::File::OnDisk'} . ' but a ' . blessed($file) ) if !$file->isa('Dist::Zilla::File::OnDisk') && !$file->isa('Dist::Zilla::File::InMemory');
+
+                    $self->log_debug( [ 'Adding/updating license in %s', $file->name ] );
+
+                    my $content = _add_license_to_perl_file( $self, $name, $file->content );
+                    $file->content($content);
+
+                    return;
+                },
+            },
+        ],
+    );
+
     # Output a LICENSE file
     $self->add_plugins('License');
 
@@ -933,6 +1011,128 @@ sub configure {
     return;
 }
 
+sub _add_license_to_perl_file {
+    my ( $plugin, $name, $content ) = @_;
+
+    my @lines = split /\n/, $content;    ## no critic (RegularExpressions::RequireDotMatchAnything, RegularExpressions::RequireExtendedFormatting, RegularExpressions::RequireLineBoundaryMatching)
+
+    # save shebang
+    my $shebang;
+    if ( $lines[0] =~ m{ \A [#] [!] }xsm ) {
+        $shebang = shift @lines;
+    }
+
+    my $package;
+    my $perl_version;
+    my $perl_version_seen;
+    my $strict_seen;
+    my $warnings_seen;
+    my $generated_msg;
+  LINE:
+    while (@lines) {
+
+        # save the automatically generated message
+        if ( $lines[0] =~ m{ \A [#] \Q Automatically generated file; DO NOT EDIT.\E \z }xsm ) {
+            $plugin->log_fatal("Multiple generated messages: $generated_msg and $lines[0]") if defined $generated_msg;
+            $generated_msg = shift @lines;
+            next LINE;
+        }
+
+        # remove empty lines and comments at the beginning
+        if ( $lines[0] =~ m{ \A (?: \s* \z | [#] ) }xsm ) {
+            shift @lines;
+            next LINE;
+        }
+
+        # keep everything as it is after use strict, warnings, and 5.???
+        last LINE if $perl_version_seen && $strict_seen && $warnings_seen;
+
+        # remove the package line
+        if ( $lines[0] =~ m{ \A package \s }xsm ) {
+            $plugin->log_fatal("Unexpected multiple package lines: $package and $lines[0]") if defined $package;
+            $package = shift @lines;
+            next LINE;
+        }
+
+        # remove use strict
+        if ( $lines[0] =~ m{ \A use \s+ strict \s* ; \z }xsm ) {
+            $strict_seen = 1;
+            shift @lines;
+            next LINE;
+        }
+
+        # remove use warnings
+        if ( $lines[0] =~ m{ \A use \s+ warnings \s* ; \z }xsm ) {
+            $warnings_seen = 1;
+            shift @lines;
+            next LINE;
+        }
+
+        # remove use 5.???
+        if ( $lines[0] =~ m{ \A use \s+ 5 [.] }xsm ) {
+            $plugin->log_fatal("Unexpected multiple Perl version lines: $perl_version and $lines[0]") if defined $perl_version;
+            $perl_version_seen = 1;
+            $perl_version      = shift @lines;
+            next LINE;
+        }
+
+        # this should never be reaches as we don't expect anything special in
+        # our files before use strict, warnings, 5.???, and the package declaration
+        $plugin->log_fatal("Unexpected line: $lines[0]");
+    }
+
+    # looks like the file isn't as we expected it
+    $plugin->log_fatal("cannot parse file $name: perl version declaration not seen") if !$perl_version_seen;
+    $plugin->log_fatal("cannot parse file $name: strict not seen")                   if !$strict_seen;
+    $plugin->log_fatal("cannot parse file $name: warnings not seen")                 if !$warnings_seen;
+
+    # if the last line is a vim line, remove it
+    if ( $lines[-1] =~ m{ \A [#] \s+ vim: }xsm ) {
+        pop @lines;
+    }
+
+    # remove empty lines at the end
+    while ( @lines && $lines[-1] =~ m{ \A \s* \z }xsm ) {
+        pop @lines;
+    }
+
+    # create the new file
+    my @content;
+
+    # we start with the shebang, if it exists
+    if ( defined $shebang ) {
+        push @content, $shebang, q{};
+    }
+
+    # next we add a new vim line
+    push @content, '# vim: ts=4 sts=4 sw=4 et: syntax=perl', q{#};
+
+    # the license
+    my $license_text = $plugin->zilla->license->fulltext;
+    $license_text =~ s{ ^ }{# }xsmg;
+    $license_text =~ s{ ^ [#] \s* $ }{#}xsmg;
+    chomp $license_text;
+    push @content, $license_text, q{};
+
+    # the perl version, strict, and warnings
+    push @content, $perl_version, 'use strict;', 'use warnings;';
+
+    # add the automatically generated message back
+    if ( defined $generated_msg ) {
+        push @content, q{}, $generated_msg;
+    }
+
+    # if we removed the package line, add that line back
+    if ( defined $package ) {
+        push @content, q{}, $package;
+    }
+
+    push @content, q{}, @lines, q{};
+
+    my $result = join "\n", @content;
+    return $result;
+}
+
 sub _attribute_from_payload {
     my ( $self, $payload ) = @_;
 
@@ -1078,14 +1278,4 @@ L<https://github.com/skirmess/perl-dzil-bundle>
 
 Sven Kirmess <sven.kirmess@kzone.ch>
 
-=head1 COPYRIGHT AND LICENSE
-
-This software is Copyright (c) 2017-2022 by Sven Kirmess.
-
-This is free software, licensed under:
-
-  The (two-clause) FreeBSD License
-
 =cut
-
-# vim: ts=4 sts=4 sw=4 et: syntax=perl

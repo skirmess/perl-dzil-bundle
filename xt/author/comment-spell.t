@@ -24,5 +24,8 @@ Test::Spelling::Comment->new(
 )->add_stopwords( <DATA>, @{ __CONFIG__()->{stopwords} } )->all_files_ok;
 
 __DATA__
-LinkCheck
 cpanfile
+Kirmess
+LinkCheck
+Sven
+TORTIOUS

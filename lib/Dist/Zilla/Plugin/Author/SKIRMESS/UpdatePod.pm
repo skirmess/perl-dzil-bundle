@@ -1,8 +1,24 @@
-package Dist::Zilla::Plugin::Author::SKIRMESS::UpdatePod;
+# vim: ts=4 sts=4 sw=4 et: syntax=perl
+#
+# Copyright (c) 2017-2022 Sven Kirmess
+#
+# Permission to use, copy, modify, and distribute this software for any
+# purpose with or without fee is hereby granted, provided that the above
+# copyright notice and this permission notice appear in all copies.
+#
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+# ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+# ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+# OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 use 5.006;
 use strict;
 use warnings;
+
+package Dist::Zilla::Plugin::Author::SKIRMESS::UpdatePod;
 
 our $VERSION = '1.000';
 
@@ -47,9 +63,6 @@ sub munge_file {
     # AUTHOR
     $self->_update_pod_section_author($file);
 
-    # COPYRIGHT AND LICENSE
-    $self->_update_pod_section_copyright_and_license($file);
-
     return;
 }
 
@@ -79,7 +92,7 @@ sub _check_pod_sections {
         [ 'SUPPORT',               REQUIRED ],
         [ 'AUTHOR',                REQUIRED ],
         [ 'CONTRIBUTORS',          ALLOWED ],
-        [ 'COPYRIGHT AND LICENSE', REQUIRED ],
+        [ 'COPYRIGHT AND LICENSE', FORBIDDEN ],
     );
 
   SECTION:
@@ -102,11 +115,13 @@ sub _check_pod_sections {
         $self->log_fatal( "Section '$sections[0]' either not allowed or in the wrong position in file '" . $file->name . q{'} );
     }
 
-    while ( @needed_sections && $needed_sections[0][1] != REQUIRED ) {
-        shift @needed_sections;
-    }
+  NEEDED_SECTION:
+    for my $section_ref (@needed_sections) {
+        next NEEDED_SECTION if !@{$section_ref};
+        next NEEDED_SECTION if $section_ref->[1] != REQUIRED;
 
-    $self->log_fatal( "Required section '$needed_sections[0]' not found in '" . $file->name . q{'} ) if @needed_sections;
+        $self->log_fatal( "Required section '$section_ref->[0]' not found in '" . $file->name . q{'} ) if @needed_sections;
+    }
 
     return;
 }
@@ -144,31 +159,6 @@ sub _update_pod_section_author {
       )
     {
         $self->log_fatal("Unable to replace AUTHOR section in file $filename.");
-    }
-
-    $file->content($content);
-
-    return;
-}
-
-sub _update_pod_section_copyright_and_license {
-    my ( $self, $file ) = @_;
-
-    my $filename = $file->name;
-    my $content  = $file->content;
-
-    my $section = "\n\n=head1 COPYRIGHT AND LICENSE\n\n" . $self->zilla->license->notice . "\n";
-
-    if (
-        $content !~ s{
-            [\s\n]*
-            ^ =head1 \s+ COPYRIGHT [ ] AND [ ] LICENSE [^\n]* $
-            .*?
-            ^ (?= = (?: head1 | cut ) )
-        }{$section}xsm
-      )
-    {
-        $self->log_fatal("Unable to replace COPYRIGHT AND LICENSE section in file $filename.");
     }
 
     $file->content($content);
@@ -299,14 +289,4 @@ L<https://github.com/skirmess/perl-dzil-bundle>
 
 Sven Kirmess <sven.kirmess@kzone.ch>
 
-=head1 COPYRIGHT AND LICENSE
-
-This software is Copyright (c) 2017-2022 by Sven Kirmess.
-
-This is free software, licensed under:
-
-  The (two-clause) FreeBSD License
-
 =cut
-
-# vim: ts=4 sts=4 sw=4 et: syntax=perl

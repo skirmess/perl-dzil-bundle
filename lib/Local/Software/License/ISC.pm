@@ -18,59 +18,49 @@ use 5.006;
 use strict;
 use warnings;
 
-package Dist::Zilla::Role::Author::SKIRMESS::Resources;
+package Local::Software::License::ISC;
 
 our $VERSION = '1.000';
 
-use Moose::Role;
+use parent 'Software::License';
 
-use namespace::autoclean;
-
-sub bugtracker {
+sub fulltext {
     my ($self) = @_;
 
-    my $resources = $self->_get_resources;
-
-    return if !defined $resources->{bugtracker}        || ref $resources->{bugtracker} ne ref {};
-    return if !defined $resources->{bugtracker}->{web} || ref $resources->{bugtracker}->{web} ne ref q{};
-
-    return $resources->{bugtracker}->{web};
+    return 'Copyright (c) ' . $self->year . q{ } . $self->_dotless_holder . "\n\n" . $self->license;
 }
 
-sub homepage {
-    my ($self) = @_;
-
-    my $resources = $self->_get_resources;
-
-    return if !defined $resources->{homepage} || ref $resources->{homepage} ne ref q{};
-
-    return $resources->{homepage};
+sub meta_name {
+    return 'open_source';
 }
 
-sub repository {
-    my ($self) = @_;
-
-    my $resources = $self->_get_resources;
-
-    return if !defined $resources->{repository}        || ref $resources->{repository} ne ref {};
-    return if !defined $resources->{repository}->{url} || ref $resources->{repository}->{url} ne ref q{};
-
-    return $resources->{repository}->{url};
+sub meta2_name {
+    return 'open_source';
 }
 
-sub _get_resources {
-    my ($self) = @_;
+sub name {
+    return 'The ISC License';
+}
 
-    my $distmeta = $self->zilla->distmeta;
-
-    return if !defined $distmeta;
-    return if !defined $distmeta->{resources} || ref $distmeta->{resources} ne ref {};
-
-    return $distmeta->{resources};
+sub url {
+    return 'about:blank';
 }
 
 1;
 
+__DATA__
+__LICENSE__
+Permission to use, copy, modify, and distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 __END__
 
 =pod
@@ -79,7 +69,7 @@ __END__
 
 =head1 NAME
 
-Dist::Zilla::Role::Author::SKIRMESS::Resources - access the distmeta resources
+Local::Software::License::ISC - The ISC License
 
 =head1 VERSION
 
