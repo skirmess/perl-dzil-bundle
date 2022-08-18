@@ -813,6 +813,10 @@ sub configure {
                     # skip everything under corpus
                     return if path('corpus')->subsumes($name);
 
+                    # TODO add (c) to pod files
+                    # skip .pod files
+                    return if path($name)->basename =~ m{ [.] pod \z }xsm;
+
                     $self->log_fatal("Unknown file: $name")
                       if $name !~ m{ \A .+ [.] (?: pl | pm ) \z }xsm
                       && $name !~ m{ \A x?t / .+ \Q.t\E \z }xsm
