@@ -815,7 +815,8 @@ sub configure {
 
                     $self->log_fatal("Unknown file: $name")
                       if $name !~ m{ \A .+ [.] (?: pl | pm ) \z }xsm
-                      && $name !~ m{ \A x?t / .+ \Q.t\E \z }xsm;
+                      && $name !~ m{ \A x?t / .+ \Q.t\E \z }xsm
+                      && $name !~ m{ \A bin / [^/]+ \z }xsm;
 
                     # Files should either be OnDist or InMemory
                     $self->log_fatal( q{'} . $file->name . q{' is not a 'Dist::Zilla::File::OnDisk'} . ' but a ' . blessed($file) ) if !$file->isa('Dist::Zilla::File::OnDisk') && !$file->isa('Dist::Zilla::File::InMemory');
