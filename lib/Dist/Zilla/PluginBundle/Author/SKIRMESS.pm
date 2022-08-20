@@ -813,12 +813,9 @@ sub configure {
                     # skip everything under corpus
                     return if path('corpus')->subsumes($name);
 
-                    # TODO add (c) to pod files
-                    # skip .pod files
-                    return if path($name)->basename =~ m{ [.] pod \z }xsm;
-
                     $self->log_fatal("Unknown file: $name")
                       if $name !~ m{ \A .+ [.] (?: pl | pm ) \z }xsm
+                      && $name !~ m{ [^/] [.] pod \z }xsm
                       && $name !~ m{ \A x?t / .+ \Q.t\E \z }xsm
                       && $name !~ m{ \A bin / [^/]+ \z }xsm;
 
@@ -827,7 +824,10 @@ sub configure {
 
                     $self->log_debug( [ 'Adding/updating license in %s', $file->name ] );
 
-                    my $content = _add_license_to_perl_file( $self, $name, $file->content );
+                    my $content =
+                      ( $name =~ m{ [^/] [.] pod \z }xsm )
+                      ? _add_license_to_pod_file( $self, $name, $file->content )
+                      : _add_license_to_perl_file( $self, $name, $file->content );
                     $file->content($content);
 
                     return;
@@ -1135,6 +1135,50 @@ sub _add_license_to_perl_file {
     }
 
     push @content, q{}, @lines, q{};
+
+    my $result = join "\n", @content;
+    return $result;
+}
+
+sub _add_license_to_pod_file {
+    my ( $plugin, $name, $content ) = @_;
+
+    my @lines = split /\n/, $content;    ## no critic (RegularExpressions::RequireDotMatchAnything, RegularExpressions::RequireExtendedFormatting, RegularExpressions::RequireLineBoundaryMatching)
+
+  LINE:
+    while (@lines) {
+
+        # remove empty lines and comments at the beginning
+        if ( $lines[0] =~ m{ \A (?: \s* \z | [#] ) }xsm ) {
+            shift @lines;
+            next LINE;
+        }
+
+        # keep everything as it is after =pod
+        last LINE if $lines[0] =~ m{ \A =pod \z }xsm;
+
+        # this should never be reaches as we don't expect anything special in
+        # our files before use strict, warnings, 5.???, and the package declaration
+        $plugin->log_fatal("Unexpected line: $lines[0]");
+    }
+
+    # remove empty lines at the end
+    while ( @lines && $lines[-1] =~ m{ \A \s* \z }xsm ) {
+        pop @lines;
+    }
+
+    # create the new file
+    my @content;
+
+    # next we add a new vim line
+    push @content, '# vim: ts=2 sts=2 sw=2 et: syntax=perl', q{#};
+
+    # the license
+    my $license_text = $plugin->zilla->license->fulltext;
+    $license_text =~ s{ ^ }{# }xsmg;
+    $license_text =~ s{ ^ [#] \s* $ }{#}xsmg;
+    chomp $license_text;
+    push @content, $license_text, q{}, @lines, q{};
 
     my $result = join "\n", @content;
     return $result;
