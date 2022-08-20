@@ -1155,7 +1155,7 @@ sub _add_license_to_pod_file {
         }
 
         # keep everything as it is after =pod
-        last LINE if $lines[0] =~ m{ \A =pod \z }xsm;
+        last LINE if $lines[0] eq '=pod';
 
         # this should never be reaches as we don't expect anything special in
         # our files before use strict, warnings, 5.???, and the package declaration
