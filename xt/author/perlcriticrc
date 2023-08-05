@@ -57,6 +57,7 @@ allow_in_main_unless_in_subroutine = 1
 
 [ErrorHandling::RequireCheckingReturnValueOfEval]
 [InputOutput::ProhibitBacktickOperators]
+[InputOutput::ProhibitBarewordDirHandles]
 [InputOutput::ProhibitBarewordFileHandles]
 [InputOutput::ProhibitExplicitStdin]
 [InputOutput::ProhibitInteractiveTest]
@@ -116,7 +117,7 @@ modules = Class::ISA {Found use of Class::ISA. This module is deprecated by the 
 [Subroutines::ProhibitManyArgs]
 [Subroutines::ProhibitNestedSubs]
 [Subroutines::ProhibitReturnSort]
-[Subroutines::ProhibitSubroutinePrototypes]
+#[Subroutines::ProhibitSubroutinePrototypes]
 
 [Subroutines::ProhibitUnusedPrivateSubroutines]
 private_name_regex = _(?!build_)\w+
