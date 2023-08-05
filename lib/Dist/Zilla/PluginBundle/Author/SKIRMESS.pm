@@ -939,16 +939,6 @@ sub configure {
     # Check if your distribution declares a dependency on itself
     $self->add_plugins('CheckSelfDependency');
 
-    # BeforeRelease plugin to check for a strict version number
-    $self->add_plugins(
-        [
-            'CheckStrictVersion',
-            {
-                decimal_only => 1,
-            },
-        ],
-    );
-
     # Extract archive and run tests before releasing the dist
     $self->add_plugins('TestRelease');
 
