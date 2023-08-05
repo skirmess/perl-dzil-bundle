@@ -26,6 +26,6 @@ if ( exists $ENV{AUTOMATED_TESTING} ) {
 }
 
 Test::Pod::LinkCheck->new(
-    cpan_backend      => 'CPAN',
+    cpan_backend      => 'MetaCPAN',
     cpan_backend_auto => 0,
 )->all_pod_ok( Test::XTFiles->new->all_files() );
