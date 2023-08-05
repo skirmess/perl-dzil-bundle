@@ -105,11 +105,11 @@ on test => sub {
 };
 
 on develop => sub {
-    requires 'CPAN';
     requires 'Dist::Zilla::Plugin::Bootstrap::lib';
     requires 'List::Util', '1.33';
+    requires 'MetaCPAN::Client';
     requires 'Module::Info';
-    requires 'Perl::Critic', '1.140';
+    requires 'Perl::Critic', '1.150';
     requires 'Perl::Critic::Policy::Bangs::ProhibitBitwiseOperators', '1.12';
     requires 'Perl::Critic::Policy::Bangs::ProhibitDebuggingModules', '1.12';
     requires 'Perl::Critic::Policy::Bangs::ProhibitFlagComments', '1.12';
@@ -160,8 +160,8 @@ on develop => sub {
     requires 'Perl::Critic::Policy::Documentation::RequireFilenameMarkup', '99';
     requires 'Perl::Critic::Policy::Documentation::RequireLinkedURLs', '99';
     requires 'Perl::Critic::Policy::HTTPCookies', '0.54';
-    requires 'Perl::Critic::Policy::Lax::ProhibitComplexMappings::LinesNotStatements', '0.013';
-    requires 'Perl::Critic::Policy::Lax::RequireExplicitPackage::ExceptForPragmata', '0.013';
+    requires 'Perl::Critic::Policy::Lax::ProhibitComplexMappings::LinesNotStatements', '0.014';
+    requires 'Perl::Critic::Policy::Lax::RequireExplicitPackage::ExceptForPragmata', '0.014';
     requires 'Perl::Critic::Policy::Modules::PerlMinimumVersion', '1.003';
     requires 'Perl::Critic::Policy::Modules::ProhibitModuleShebang', '99';
     requires 'Perl::Critic::Policy::Modules::ProhibitPOSIXimport', '99';
@@ -177,8 +177,8 @@ on develop => sub {
     requires 'Perl::Critic::Policy::Moose::RequireMakeImmutable', '1.05';
     requires 'Perl::Critic::Policy::Subroutines::ProhibitExportingUndeclaredSubs', '0.06';
     requires 'Perl::Critic::Policy::Subroutines::ProhibitQualifiedSubDeclarations', '0.06';
-    requires 'Perl::Critic::Policy::Tics::ProhibitManyArrows', '0.009';
-    requires 'Perl::Critic::Policy::Tics::ProhibitUseBase', '0.009';
+    requires 'Perl::Critic::Policy::Tics::ProhibitManyArrows', '0.010';
+    requires 'Perl::Critic::Policy::Tics::ProhibitUseBase', '0.010';
     requires 'Perl::Critic::Policy::TryTiny::RequireBlockTermination', '0.03';
     requires 'Perl::Critic::Policy::TryTiny::RequireUse', '0.05';
     requires 'Perl::Critic::Policy::ValuesAndExpressions::ConstantBeforeLt', '99';

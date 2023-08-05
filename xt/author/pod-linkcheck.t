@@ -8,10 +8,10 @@ use warnings;
 
 # Automatically generated file; DO NOT EDIT.
 
-# CPAN is used by Test::Pod::LinkCheck but is not a dependency. The
-# require on CPAN is only here for dzil to pick it up and add it as a
-# develop dependency to the cpanfile.
-require CPAN;
+# MetaCPAN::Client is used by Test::Pod::LinkCheck but is not a dependency.
+# The require on MetaCPAN::Client is only here for dzil to pick it up and add
+# it as a develop dependency to the cpanfile.
+require MetaCPAN::Client;
 
 # Test::Pod::LinkCheck checks for link targets in @INC. We have to add these
 # directories to be able to find link targets in this project.
