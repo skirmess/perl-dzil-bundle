@@ -122,6 +122,7 @@ sub configure {
             {
                 ':version'       => '2.016',
                 exclude_filename => [
+                    'CLAUDE.md',
                     'dist.ini',
                     @generated_files,
                 ],
