@@ -139,6 +139,7 @@ on develop => sub {
     requires 'Perl::Critic::Policy::Community::PackageMatchesFilename', 'v1.0.4';
     requires 'Perl::Critic::Policy::Community::PreferredAlternatives', 'v1.0.4';
     requires 'Perl::Critic::Policy::Community::Prototypes', 'v1.0.4';
+    requires 'Perl::Critic::Policy::Community::SplitQuotedPattern', 'v1.0.4';
     requires 'Perl::Critic::Policy::Community::StrictWarnings', 'v1.0.4';
     requires 'Perl::Critic::Policy::Community::Threads', 'v1.0.4';
     requires 'Perl::Critic::Policy::Community::Wantarray', 'v1.0.4';

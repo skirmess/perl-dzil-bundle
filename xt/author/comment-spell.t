@@ -34,5 +34,7 @@ cpanfile
 hunspell
 Kirmess
 LinkCheck
+MERCHANTABILITY
+MetaCPAN
 Sven
 TORTIOUS

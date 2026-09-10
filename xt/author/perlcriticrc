@@ -210,6 +210,7 @@ forbid_use_version = 1
 [Community::POSIXImports]
 [Community::PreferredAlternatives]
 [Community::Prototypes]
+[Community::SplitQuotedPattern]
 [Community::StrictWarnings]
 [Community::Threads]
 [Community::Wantarray]
