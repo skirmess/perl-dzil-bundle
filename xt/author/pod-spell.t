@@ -19,6 +19,10 @@ if ( exists $ENV{AUTOMATED_TESTING} ) {
     exit 0;
 }
 
+# hunspell defaults to the dictionary of the current locale, but the text we
+# check is English.
+local $ENV{DICTIONARY} = 'en_US';
+
 add_stopwords(<DATA>);
 add_stopwords( @{ __CONFIG__()->{stopwords} } );
 
