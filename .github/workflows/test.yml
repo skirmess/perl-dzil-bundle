@@ -10,7 +10,7 @@ jobs:
       TAR_OPTIONS: --warning=no-unknown-keyword
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v7
         with:
           path: ${{ github.event.repository.name }}
 
@@ -21,7 +21,9 @@ jobs:
       - run: uname -a
 
       - name: find perl
-        run: perl -e 'print qq{perl = $^X\n::set-output name=bin::$^X\n}'
+        run: |
+          perl -e 'print qq{perl = $^X\n}'
+          perl -e 'print qq{bin=$^X\n}' >>"$GITHUB_OUTPUT"
         id: perl
 
       - name: perl -V
@@ -31,7 +33,7 @@ jobs:
         run: |
           make=$(which $(${{ steps.perl.outputs.bin }} -MConfig -e 'print $Config{make}'))
           echo "make = $make"
-          echo "::set-output name=bin::$make"
+          echo "bin=$make" >>"$GITHUB_OUTPUT"
         id: make
 
       - name: gcc --version
@@ -54,7 +56,7 @@ jobs:
         run: |
           installsitebin=$(${{ steps.perl.outputs.bin }} -MConfig -e 'print $Config{installsitebin};')
           echo "installsitebin = $installsitebin"
-          echo "::set-output name=path::$installsitebin"
+          echo "path=$installsitebin" >>"$GITHUB_OUTPUT"
         id: installsitebin
 
       - name: cpanm --version
@@ -83,7 +85,7 @@ jobs:
         working-directory: ${{ github.event.repository.name }}
         if: always()
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v7
         with:
           name: author-tests
           path: ~/.cpanm/work/*/build.log
